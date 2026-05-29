@@ -8,54 +8,18 @@ import {
   SafeAreaView,
   StatusBar,
 } from 'react-native';
+import { routes } from '../mockData';
 
 export default function RoutesListScreen({ navigation }) {
-  // All routes based on your Figma
-  const allRoutes = [
-    {
-      id: '1',
-      name: 'Route A - Main Gate',
-      stops: 5,
-      loopTime: '~12 min',
-      status: 'Has Space',
-      nextArrival: '4 min',
-      color: '#4CAF50',
-    },
-    {
-      id: '2',
-      name: 'Paa Joe Route',
-      stops: 4,
-      loopTime: '~10 min',
-      status: 'Currently full',
-      nextArrival: '8 min',
-      color: '#FF9800',
-    },
-    {
-      id: '3',
-      name: 'SRC Route',
-      stops: 6,
-      loopTime: '~15 min',
-      status: 'No shuttle active',
-      nextArrival: 'N/A',
-      color: '#F44336',
-    },
-    {
-      id: '4',
-      name: 'Unity Hall Route',
-      stops: 3,
-      loopTime: '~8 min',
-      status: 'Has Space',
-      nextArrival: '2 min',
-      color: '#2196F3',
-    },
-  ];
+
+  const allRoutes = routes;
 
   const renderRouteCard = ({ item }) => (
     <TouchableOpacity
       style={styles.routeCard}
       onPress={() => navigation.navigate('RouteDetail', { route: item })}
     >
-      <View style={[styles.colorBar, { backgroundColor: item.color }]} />
+      <View style={[styles.colorBar, { backgroundColor: item.color || '#007AFF' }]} />
       
       <View style={styles.routeInfo}>
         <Text style={styles.routeName}>{item.name}</Text>
