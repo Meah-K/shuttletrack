@@ -4,6 +4,7 @@ import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import HomeMapScreen from './screens/HomeMapScreen';
 import ShuttleDetailScreen from './screens/ShuttleDetailScreen';
+import WalkOrWaitScreen from './screens/WalkOrWaitScreen';
 
 const Stack = createStackNavigator();
 
@@ -15,6 +16,7 @@ export default function App() {
         <Stack.Screen name="Register" component={RegisterScreen} />
         <Stack.Screen name="Main" component={HomeMapScreen} />
         <Stack.Screen name="ShuttleDetail" component={ShuttleDetailScreen} />
+        <Stack.Screen name="WalkOrWait" component={WalkOrWaitScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
