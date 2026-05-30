@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import LoginScreen from './screens/LoginScreen';
@@ -19,10 +20,15 @@ import { isNetworkError } from './mockData';
 >>>>>>> origin/feature/notifications-marvelle
 
 const Stack = createStackNavigator();
+=======
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+>>>>>>> origin/feature/routes-shila
 
 export default function App() {
 <<<<<<< HEAD
   return (
+<<<<<<< HEAD
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Login" component={LoginScreen} />
@@ -45,3 +51,23 @@ export default function App() {
     </NavigationContainer>
   );
 }
+=======
+    <View style={styles.container}>
+      <Text style={styles.text}>Hello! App is working!</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  text: {
+    fontSize: 24,
+    color: 'blue',
+  },
+});
+>>>>>>> origin/feature/routes-shila
