@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,21 +7,26 @@ import {
   SafeAreaView,
   ScrollView,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { routes, calculateDistanceKm, WALKING_SPEED_KMH } from '../mockData';
 
 export default function WalkOrWaitScreen({ navigation, route }) {
   const { shuttle } = route.params;
-  const [selectedStop, setSelectedStop] = useState(null);
   const [recommendation, setRecommendation] = useState(null);
 
-  // Get stops for the shuttle's route
   const shuttleRoute = routes.find(r => r.routeId === shuttle.routeId);
-  const stops = shuttleRoute ? shuttleRoute.stops : [];
+
+  useEffect(() => {
+    const stop = shuttleRoute?.stops[0] || {
+      stopId: 'default',
+      name: 'Main Gate',
+      latitude: 6.6745,
+      longitude: -1.5716,
+    };
+    calculate(stop);
+  }, [shuttle]);
 
   function calculate(stop) {
-    setSelectedStop(stop);
-
-    // Mock student location — center of KNUST campus
     const studentLat = 6.6736;
     const studentLng = -1.5727;
 
@@ -30,137 +35,170 @@ export default function WalkOrWaitScreen({ navigation, route }) {
       stop.latitude, stop.longitude
     );
 
-    const walkingTimeMinutes = Math.round((distanceKm / WALKING_SPEED_KMH) * 60);
+    const walkingTime = Math.max(Math.round((distanceKm / WALKING_SPEED_KMH) * 60), 1);
     const shuttleEta = shuttle.etaMinutes;
+    const isUnavailable = !shuttleEta || shuttle.status === 'FULL' || shuttle.status === 'INACTIVE';
 
-    if (!shuttleEta || shuttle.status === 'FULL' || shuttle.status === 'INACTIVE') {
-      setRecommendation({
-        result: 'WALK',
-        walkingTime: walkingTimeMinutes,
-        shuttleEta: null,
-        distanceMeters: Math.round(distanceKm * 1000),
-      });
-    } else {
-      setRecommendation({
-        result: shuttleEta < walkingTimeMinutes ? 'WAIT' : 'WALK',
-        walkingTime: walkingTimeMinutes,
-        shuttleEta,
-        distanceMeters: Math.round(distanceKm * 1000),
-      });
-    }
+    setRecommendation({
+      recommendation: isUnavailable ? 'WALK' : shuttleEta < walkingTime ? 'WAIT' : 'WALK',
+      walkingTime,
+      shuttleEta: shuttleEta || null,
+      distanceMeters: Math.max(Math.round(distanceKm * 1000), 100),
+      stopName: stop.name,
+    });
   }
+
+  const isWait = recommendation?.recommendation === 'WAIT';
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} style={styles.inner}>
 
-        {/* Back button */}
+      {/* Header */}
+      <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.backArrow}>←</Text>
+          <Ionicons name="arrow-back" size={20} color="#1A1A1A" />
         </TouchableOpacity>
+        <Text style={styles.headerTitle}>Walk or Wait?</Text>
+        <View style={{ width: 36 }} />
+      </View>
 
-        <Text style={styles.title}>Walk or Wait</Text>
+      <ScrollView showsVerticalScrollIndicator={false} style={styles.inner}>
 
-        {/* Destination selector */}
-        <Text style={styles.label}>Where are you going?</Text>
-        <View style={styles.stopsContainer}>
-          {stops.map((stop) => (
-            <TouchableOpacity
-              key={stop.stopId}
-              style={[
-                styles.stopOption,
-                selectedStop?.stopId === stop.stopId && styles.stopOptionActive
-              ]}
-              onPress={() => calculate(stop)}
-            >
-              <Text style={[
-                styles.stopOptionText,
-                selectedStop?.stopId === stop.stopId && styles.stopOptionTextActive
-              ]}>
-                {stop.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
+        {/* Shuttle info card */}
+        <View style={styles.shuttleCard}>
+          <View style={styles.shuttleIconBox}>
+            <Ionicons name="bus" size={24} color="#1C6B2A" />
+          </View>
+          <View style={styles.shuttleInfo}>
+            <Text style={styles.shuttleName}>{shuttle.routeName}</Text>
+            <Text style={styles.shuttleSub}>
+              {shuttle.status === 'HAS_SPACE' ? 'Has space · arriving soon' :
+               shuttle.status === 'FULL' ? 'Currently full' : 'Inactive'}
+            </Text>
+          </View>
+          <View style={[
+            styles.shuttleBadge,
+            { backgroundColor: shuttle.status === 'HAS_SPACE' ? '#EAF5EC' : '#FFF0F0' }
+          ]}>
+            <Text style={[
+              styles.shuttleBadgeText,
+              { color: shuttle.status === 'HAS_SPACE' ? '#1C6B2A' : '#E63946' }
+            ]}>
+              {shuttle.etaMinutes ? `${shuttle.etaMinutes} min` : 'N/A'}
+            </Text>
+          </View>
         </View>
 
         {/* Result */}
-        {recommendation && (
+        {recommendation ? (
           <View>
+            {/* Hero block */}
             <View style={[
-              styles.resultBlock,
-              recommendation.result === 'WAIT' ? styles.resultBlockGreen : styles.resultBlockRed
+              styles.resultHero,
+              { backgroundColor: isWait ? '#1C6B2A' : '#E63946' }
             ]}>
-              <Text style={[
-                styles.resultLabel,
-                recommendation.result === 'WAIT' ? styles.resultLabelGreen : styles.resultLabelRed
-              ]}>
-                RECOMMENDATION
-              </Text>
-              <Text style={[
-                styles.resultText,
-                recommendation.result === 'WAIT' ? styles.resultTextGreen : styles.resultTextRed
-              ]}>
-                {recommendation.result === 'WAIT' ? 'Wait' : 'Walk'}
-              </Text>
-              <Text style={[
-                styles.resultSub,
-                recommendation.result === 'WAIT' ? styles.resultSubGreen : styles.resultSubRed
-              ]}>
-                {recommendation.result === 'WAIT'
-                  ? `Shuttle arrives in ${recommendation.shuttleEta} min`
-                  : `${recommendation.walkingTime} min on foot`}
-              </Text>
-            </View>
-
-            {/* Divider */}
-            <View style={styles.dividerRow}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>vs walking</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            {/* Walking card */}
-            <View style={styles.comparisonCard}>
-              <View style={styles.comparisonLeft}>
-                <View style={styles.comparisonIcon}>
-                  <Text style={styles.comparisonEmoji}>🚶</Text>
-                </View>
-                <View>
-                  <Text style={styles.comparisonTitle}>Walking time</Text>
-                  <Text style={styles.comparisonSub}>~{recommendation.distanceMeters}m away</Text>
-                </View>
+              <View style={styles.resultContent}>
+                <Text style={styles.resultLabel}>RECOMMENDATION</Text>
+                <Text style={styles.resultValue}>
+                  {isWait ? 'Wait' : 'Walk'}
+                </Text>
+                <Text style={styles.resultSub}>
+                  {isWait
+                    ? `Shuttle arrives in ${recommendation.shuttleEta} min`
+                    : `${recommendation.walkingTime} min on foot`}
+                </Text>
               </View>
-              <Text style={styles.comparisonTime}>{recommendation.walkingTime} min</Text>
+              <Ionicons
+                name={isWait ? 'time-outline' : 'walk-outline'}
+                size={64}
+                color="rgba(255,255,255,0.2)"
+              />
             </View>
 
-            {/* Shuttle card */}
-            <View style={styles.comparisonCard}>
-              <View style={styles.comparisonLeft}>
-                <View style={[styles.comparisonIcon, styles.comparisonIconGreen]}>
-                  <Text style={styles.comparisonEmoji}>🚌</Text>
+            {/* Comparison row */}
+            <View style={styles.comparisonRow}>
+
+              {/* Walking */}
+              <View style={[styles.compCard, !isWait && styles.compCardActive]}>
+                <View style={[
+                  styles.compIconBox,
+                  { backgroundColor: !isWait ? '#E63946' : '#F7F8F5' }
+                ]}>
+                  <Ionicons
+                    name="walk"
+                    size={22}
+                    color={!isWait ? '#FFFFFF' : '#6B7280'}
+                  />
                 </View>
-                <View>
-                  <Text style={styles.comparisonTitle}>{shuttle.routeName}</Text>
-                  <Text style={styles.comparisonSub}>
-                    {shuttle.status === 'HAS_SPACE' ? 'Has space · arriving soon' : 'No space available'}
-                  </Text>
-                </View>
+                <Text style={styles.compTitle}>Walking</Text>
+                <Text style={[styles.compTime, { color: !isWait ? '#E63946' : '#1A1A1A' }]}>
+                  {recommendation.walkingTime} min
+                </Text>
+                <Text style={styles.compSub}>~{recommendation.distanceMeters}m</Text>
               </View>
-              <Text style={[styles.comparisonTime, styles.comparisonTimeGreen]}>
-                {recommendation.shuttleEta ? `${recommendation.shuttleEta} min` : 'N/A'}
+
+              {/* VS */}
+              <View style={styles.vsDivider}>
+                <Text style={styles.vsText}>VS</Text>
+              </View>
+
+              {/* Shuttle */}
+              <View style={[styles.compCard, isWait && styles.compCardActive]}>
+                <View style={[
+                  styles.compIconBox,
+                  { backgroundColor: isWait ? '#1C6B2A' : '#F7F8F5' }
+                ]}>
+                  <Ionicons
+                    name="bus"
+                    size={22}
+                    color={isWait ? '#FFFFFF' : '#6B7280'}
+                  />
+                </View>
+                <Text style={styles.compTitle}>Shuttle</Text>
+                <Text style={[styles.compTime, { color: isWait ? '#1C6B2A' : '#1A1A1A' }]}>
+                  {recommendation.shuttleEta ? `${recommendation.shuttleEta} min` : 'N/A'}
+                </Text>
+                <Text style={styles.compSub}>
+                  {shuttle.status === 'HAS_SPACE' ? 'Has space' : 'No space'}
+                </Text>
+              </View>
+
+            </View>
+
+            {/* Nearest stop */}
+            <View style={styles.stopInfo}>
+              <Ionicons name="location" size={16} color="#1C6B2A" />
+              <Text style={styles.stopInfoText}>
+                Nearest stop:{' '}
+                <Text style={styles.stopInfoBold}>{recommendation.stopName}</Text>
               </Text>
             </View>
 
             {/* Recalculate */}
             <TouchableOpacity
               style={styles.recalcButton}
-              onPress={() => setRecommendation(null)}
+              onPress={() => {
+                const stop = shuttleRoute?.stops[0] || {
+                  stopId: 'default',
+                  name: 'Main Gate',
+                  latitude: 6.6745,
+                  longitude: -1.5716,
+                };
+                calculate(stop);
+              }}
             >
-              <Text style={styles.recalcButtonText}>Recalculate</Text>
+              <Ionicons name="refresh" size={16} color="#1C6B2A" />
+              <Text style={styles.recalcText}>Recalculate</Text>
             </TouchableOpacity>
+
+          </View>
+        ) : (
+          <View style={styles.loadingBox}>
+            <Ionicons name="reload" size={32} color="#1C6B2A" />
+            <Text style={styles.loadingText}>Calculating...</Text>
           </View>
         )}
 
@@ -174,170 +212,203 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F7F8F5',
   },
-  inner: {
-    paddingHorizontal: 24,
-    paddingTop: 20,
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#E0E0DC',
   },
   backButton: {
-    width: 32,
-    height: 32,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E0E0DC',
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  backArrow: {
-    fontSize: 18,
-    color: '#1A1A1A',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    marginBottom: 24,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#1A1A1A',
-    marginBottom: 10,
-  },
-  stopsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 24,
-  },
-  stopOption: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#D1D5DB',
-    borderRadius: 50,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  stopOptionActive: {
-    backgroundColor: '#EAF5EC',
-    borderColor: '#1C6B2A',
-  },
-  stopOptionText: {
-    fontSize: 13,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-  stopOptionTextActive: {
-    color: '#1C6B2A',
-    fontWeight: '700',
-  },
-  resultBlock: {
-    borderRadius: 20,
-    padding: 24,
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  resultBlockGreen: { backgroundColor: '#EAF5EC' },
-  resultBlockRed: { backgroundColor: '#FFF0F0' },
-  resultLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    marginBottom: 8,
-  },
-  resultLabelGreen: { color: '#1C6B2A' },
-  resultLabelRed: { color: '#E63946' },
-  resultText: {
-    fontSize: 48,
-    fontWeight: '800',
-    marginBottom: 4,
-  },
-  resultTextGreen: { color: '#1C6B2A' },
-  resultTextRed: { color: '#E63946' },
-  resultSub: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  resultSubGreen: { color: '#2D8A3E' },
-  resultSubRed: { color: '#E63946' },
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 12,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E0E0DC',
-  },
-  dividerText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#6B7280',
-  },
-  comparisonCard: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E0E0DC',
-    borderRadius: 12,
-    padding: 14,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  comparisonLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
-  },
-  comparisonIcon: {
     width: 36,
     height: 36,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#F7F8F5',
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  comparisonIconGreen: {
-    backgroundColor: '#EAF5EC',
-  },
-  comparisonEmoji: {
-    fontSize: 18,
-  },
-  comparisonTitle: {
-    fontSize: 13,
-    fontWeight: '600',
+  headerTitle: {
+    fontSize: 17,
+    fontWeight: '700',
     color: '#1A1A1A',
   },
-  comparisonSub: {
-    fontSize: 11,
+  inner: {
+    padding: 16,
+  },
+  shuttleCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 0.5,
+    borderColor: '#E0E0DC',
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 16,
+  },
+  shuttleIconBox: {
+    width: 44,
+    height: 44,
+    backgroundColor: '#EAF5EC',
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shuttleInfo: {
+    flex: 1,
+    gap: 3,
+  },
+  shuttleName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1A1A1A',
+  },
+  shuttleSub: {
+    fontSize: 12,
     color: '#6B7280',
   },
-  comparisonTime: {
-    fontSize: 16,
+  shuttleBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 50,
+  },
+  shuttleBadgeText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  resultHero: {
+    borderRadius: 20,
+    padding: 24,
+    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  resultContent: {
+    gap: 6,
+    flex: 1,
+  },
+  resultLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.7)',
+    letterSpacing: 1,
+  },
+  resultValue: {
+    fontSize: 52,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    lineHeight: 60,
+  },
+  resultSub: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.85)',
+    fontWeight: '500',
+  },
+  comparisonRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 12,
+    alignItems: 'center',
+  },
+  compCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 0.5,
+    borderColor: '#E0E0DC',
+    padding: 16,
+    alignItems: 'center',
+    gap: 6,
+  },
+  compCardActive: {
+    borderWidth: 2,
+    borderColor: '#1C6B2A',
+  },
+  compIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  compTitle: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '600',
+  },
+  compTime: {
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  compSub: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    textAlign: 'center',
+  },
+  vsDivider: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F7F8F5',
+    borderWidth: 1,
+    borderColor: '#E0E0DC',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  vsText: {
+    fontSize: 11,
     fontWeight: '700',
     color: '#6B7280',
   },
-  comparisonTimeGreen: {
-    color: '#1C6B2A',
+  stopInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 0.5,
+    borderColor: '#E0E0DC',
+    padding: 12,
+    marginBottom: 12,
+  },
+  stopInfoText: {
+    fontSize: 13,
+    color: '#6B7280',
+  },
+  stopInfoBold: {
+    fontWeight: '700',
+    color: '#1A1A1A',
   },
   recalcButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
     backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
     borderColor: '#1C6B2A',
     borderRadius: 50,
     paddingVertical: 14,
-    alignItems: 'center',
     marginBottom: 32,
-    marginTop: 8,
   },
-  recalcButtonText: {
+  recalcText: {
     fontSize: 15,
     fontWeight: '700',
     color: '#1C6B2A',
+  },
+  loadingBox: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 60,
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 15,
+    color: '#6B7280',
   },
 });

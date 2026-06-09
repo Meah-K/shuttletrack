@@ -1,73 +1,47 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
+import SplashScreen from './screens/SplashScreen';
+import OnboardingScreen from './screens/OnboardingScreen';
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
-import HomeMapScreen from './screens/HomeMapScreen';
-import ShuttleDetailScreen from './screens/ShuttleDetailScreen';
-import WalkOrWaitScreen from './screens/WalkOrWaitScreen';
-=======
-import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
-
-import NotificationsScreen from './screens/NotificationsScreen';
-import NotificationDetailScreen from './screens/NotificationDetailScreen';
+import EmptyStateScreen from './screens/EmptyStateScreen';
 import ErrorScreen from './screens/ErrorScreen';
-
-import { isNetworkError } from './mockData';
->>>>>>> origin/feature/notifications-marvelle
+import DriverLoginScreen from './screens/DriverLoginScreen';
+import DriverStatusScreen from './screens/DriverStatusScreen';
+import DriverProfileScreen from './screens/DriverProfileScreen';
+import DriverErrorScreen from './screens/DriverErrorScreen';
+import TabNavigator from './navigation/TabNavigator';
 
 const Stack = createStackNavigator();
-=======
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
->>>>>>> origin/feature/routes-shila
 
 export default function App() {
-<<<<<<< HEAD
   return (
-<<<<<<< HEAD
     <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator
+        initialRouteName="Splash"
+        screenOptions={{ headerShown: false }}
+      >
+        {/* Launch screens */}
+        <Stack.Screen name="Splash" component={SplashScreen} />
+        <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+
+        {/* Student auth */}
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
-        <Stack.Screen name="Main" component={HomeMapScreen} />
-        <Stack.Screen name="ShuttleDetail" component={ShuttleDetailScreen} />
-        <Stack.Screen name="WalkOrWait" component={WalkOrWaitScreen} />
-=======
-  if (isNetworkError) {
-    return <ErrorScreen onRetry={() => console.log('Retry pressed')} />;
-  }
 
-  return (
-    <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="Notifications" component={NotificationsScreen} />
-        <Stack.Screen name="NotificationDetail" component={NotificationDetailScreen} />
->>>>>>> origin/feature/notifications-marvelle
+        {/* Student main app */}
+        <Stack.Screen name="Main" component={TabNavigator} />
+
+        {/* Utility screens */}
+        <Stack.Screen name="EmptyState" component={EmptyStateScreen} />
+        <Stack.Screen name="Error" component={ErrorScreen} />
+
+        {/* Driver app */}
+        <Stack.Screen name="DriverLogin" component={DriverLoginScreen} />
+        <Stack.Screen name="DriverStatus" component={DriverStatusScreen} />
+        <Stack.Screen name="DriverProfile" component={DriverProfileScreen} />
+        <Stack.Screen name="DriverError" component={DriverErrorScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
 }
-=======
-    <View style={styles.container}>
-      <Text style={styles.text}>Hello! App is working!</Text>
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-  },
-  text: {
-    fontSize: 24,
-    color: 'blue',
-  },
-});
->>>>>>> origin/feature/routes-shila

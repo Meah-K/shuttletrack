@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,18 +6,60 @@ import {
   TouchableOpacity,
   ScrollView,
   SafeAreaView,
+  Animated,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { shuttles } from '../mockData';
 
-export default function HomeMapScreen({ navigation }) {
-  const [shuttleData, setShuttleData] = useState(shuttles);
+const ADS = [
+  {
+    id: 1,
+    title: 'Chicken Republic — Paa Joe',
+    subtitle: '10% off with code SHUTTLE10 🍗',
+    color: '#E63946',
+  },
+  {
+    id: 2,
+    title: 'Papaye Restaurant — Main Gate',
+    subtitle: 'Free drink with any meal today 🥤',
+    color: '#1C6B2A',
+  },
+  {
+    id: 3,
+    title: 'KNUST Print Shop — SRC',
+    subtitle: 'Print 50 pages for GHS 5 only 🖨️',
+    color: '#2E5F8A',
+  },
+];
 
-  useEffect(() => {
+export default function HomeMapScreen({ navigation }) {
+  const [shuttleData] = useState(shuttles);
+  const [isExpanded, setIsExpanded] = useState(true);
+  const [currentAd, setCurrentAd] = useState(0);
+  const sheetHeight = React.useRef(new Animated.Value(1)).current;
+
+  // Rotate ads every 5 seconds
+  React.useEffect(() => {
     const interval = setInterval(() => {
-      setShuttleData([...shuttles]);
+      setCurrentAd(prev => (prev + 1) % ADS.length);
     }, 5000);
     return () => clearInterval(interval);
   }, []);
+
+  function toggleSheet() {
+    Animated.spring(sheetHeight, {
+      toValue: isExpanded ? 0 : 1,
+      useNativeDriver: false,
+      tension: 100,
+      friction: 12,
+    }).start();
+    setIsExpanded(!isExpanded);
+  }
+
+  const sheetHeightInterpolated = sheetHeight.interpolate({
+    inputRange: [0, 1],
+    outputRange: [60, 280],
+  });
 
   function getStatusLabel(status) {
     if (status === 'HAS_SPACE') return 'Has space';
@@ -37,6 +79,8 @@ export default function HomeMapScreen({ navigation }) {
     return styles.badgeTextGrey;
   }
 
+  const ad = ADS[currentAd];
+
   return (
     <SafeAreaView style={styles.container}>
 
@@ -46,17 +90,21 @@ export default function HomeMapScreen({ navigation }) {
         <Text style={styles.mapText}>Live Campus Map</Text>
         <Text style={styles.mapSub}>Map renders on mobile device</Text>
 
-        {/* Shuttle markers simulation */}
+        {/* Shuttle markers */}
         <View style={styles.markersRow}>
           {shuttleData.map((shuttle) => (
             <View
               key={shuttle.shuttleId}
               style={[
                 styles.marker,
-                { backgroundColor: shuttle.status === 'HAS_SPACE' ? '#1C6B2A' : shuttle.status === 'FULL' ? '#E63946' : '#6B7280' }
+                {
+                  backgroundColor:
+                    shuttle.status === 'HAS_SPACE' ? '#1C6B2A' :
+                    shuttle.status === 'FULL' ? '#E63946' : '#6B7280'
+                }
               ]}
             >
-              <Text style={styles.markerText}>🚌</Text>
+              <Ionicons name="bus" size={16} color="white" />
             </View>
           ))}
         </View>
@@ -64,43 +112,84 @@ export default function HomeMapScreen({ navigation }) {
 
       {/* Search bar */}
       <View style={styles.searchBar}>
-        <Text style={styles.searchIcon}>🔍</Text>
+        <Ionicons name="search-outline" size={16} color="#6B7280" />
         <Text style={styles.searchPlaceholder}>Search stops or routes...</Text>
       </View>
 
-      {/* Bottom sheet */}
-      <View style={styles.bottomSheet}>
-        <View style={styles.handle} />
-        <View style={styles.sheetHeader}>
-          <Text style={styles.sheetTitle}>Active shuttles</Text>
-          <View style={styles.liveRow}>
-            <View style={styles.liveDot} />
-            <Text style={styles.liveText}>Live</Text>
+      {/* Legend */}
+      <View style={styles.legend}>
+        <View style={styles.legendRow}>
+          <View style={[styles.legendDot, { backgroundColor: '#1C6B2A' }]} />
+          <Text style={styles.legendText}>Has space</Text>
+        </View>
+        <View style={styles.legendRow}>
+          <View style={[styles.legendDot, { backgroundColor: '#E63946' }]} />
+          <Text style={styles.legendText}>Full</Text>
+        </View>
+      </View>
+
+      {/* Ad banner */}
+      <View style={styles.adBanner}>
+        <View style={styles.adLeft}>
+          <Text style={styles.adTag}>AD</Text>
+          <View style={styles.adContent}>
+            <Text style={styles.adTitle}>{ad.title}</Text>
+            <Text style={styles.adSub}>{ad.subtitle}</Text>
           </View>
         </View>
-
-        <ScrollView showsVerticalScrollIndicator={false}>
-          {shuttleData.map((shuttle) => (
-            <TouchableOpacity
-              key={shuttle.shuttleId}
-              style={styles.shuttleCard}
-              onPress={() => navigation.navigate('ShuttleDetail', { shuttle })}
-            >
-              <View style={styles.cardLeft}>
-                <Text style={styles.cardName}>{shuttle.routeName}</Text>
-                <Text style={styles.cardSub}>
-                  {shuttle.etaMinutes ? `ETA ${shuttle.etaMinutes} min` : 'No ETA available'}
-                </Text>
-              </View>
-              <View style={[styles.badge, getBadgeStyle(shuttle.status)]}>
-                <Text style={getBadgeTextStyle(shuttle.status)}>
-                  {getStatusLabel(shuttle.status)}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        <TouchableOpacity style={[styles.adButton, { backgroundColor: ad.color }]}>
+          <Text style={styles.adButtonText}>View</Text>
+        </TouchableOpacity>
       </View>
+
+      {/* Retractable bottom sheet */}
+      <Animated.View style={[styles.bottomSheet, { height: sheetHeightInterpolated }]}>
+
+        {/* Handle + header */}
+        <TouchableOpacity onPress={toggleSheet} style={styles.sheetTopRow} activeOpacity={0.8}>
+          <View style={styles.handle} />
+          <View style={styles.sheetHeader}>
+            <Text style={styles.sheetTitle}>Active shuttles</Text>
+            <View style={styles.sheetRight}>
+              <View style={styles.liveRow}>
+                <View style={styles.liveDot} />
+                <Text style={styles.liveText}>Live</Text>
+              </View>
+              <Ionicons
+                name={isExpanded ? 'chevron-down' : 'chevron-up'}
+                size={18}
+                color="#6B7280"
+              />
+            </View>
+          </View>
+        </TouchableOpacity>
+
+        {/* Shuttle list */}
+        {isExpanded && (
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {shuttleData.map((shuttle) => (
+              <TouchableOpacity
+                key={shuttle.shuttleId}
+                style={styles.shuttleCard}
+                onPress={() => navigation.navigate('ShuttleDetail', { shuttle })}
+              >
+                <View style={styles.cardLeft}>
+                  <Text style={styles.cardName}>{shuttle.routeName}</Text>
+                  <Text style={styles.cardSub}>
+                    {shuttle.etaMinutes ? `ETA ${shuttle.etaMinutes} min` : 'No ETA available'}
+                  </Text>
+                </View>
+                <View style={[styles.badge, getBadgeStyle(shuttle.status)]}>
+                  <Text style={getBadgeTextStyle(shuttle.status)}>
+                    {getStatusLabel(shuttle.status)}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color="#D0D0CC" />
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
+      </Animated.View>
 
     </SafeAreaView>
   );
@@ -118,9 +207,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
   },
-  mapEmoji: {
-    fontSize: 48,
-  },
+  mapEmoji: { fontSize: 48 },
   mapText: {
     fontSize: 18,
     fontWeight: '700',
@@ -149,9 +236,6 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 4,
   },
-  markerText: {
-    fontSize: 20,
-  },
   searchBar: {
     position: 'absolute',
     top: 56,
@@ -169,12 +253,95 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  searchIcon: {
-    fontSize: 14,
-  },
   searchPlaceholder: {
     fontSize: 14,
     color: '#6B7280',
+  },
+  legend: {
+    position: 'absolute',
+    top: 110,
+    right: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    padding: 10,
+    gap: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  legendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  legendDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  legendText: {
+    fontSize: 11,
+    color: '#1A1A1A',
+    fontWeight: '600',
+  },
+  adBanner: {
+    position: 'absolute',
+    top: 110,
+    left: 16,
+    right: 120,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    borderLeftWidth: 3,
+    borderLeftColor: '#1C6B2A',
+  },
+  adLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  adTag: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    backgroundColor: '#6B7280',
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  adContent: {
+    flex: 1,
+    gap: 2,
+  },
+  adTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1A1A1A',
+  },
+  adSub: {
+    fontSize: 11,
+    color: '#6B7280',
+  },
+  adButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 50,
+  },
+  adButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   bottomSheet: {
     position: 'absolute',
@@ -184,13 +351,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    padding: 16,
-    maxHeight: '40%',
+    paddingHorizontal: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.08,
     shadowRadius: 20,
     elevation: 10,
+    overflow: 'hidden',
+  },
+  sheetTopRow: {
+    paddingTop: 10,
+    paddingBottom: 8,
   },
   handle: {
     width: 40,
@@ -198,16 +369,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#D0D0CC',
     borderRadius: 2,
     alignSelf: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   sheetHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+  },
+  sheetRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   sheetTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
     color: '#1A1A1A',
   },
@@ -234,6 +409,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 8,
   },
   cardLeft: {
     flex: 1,

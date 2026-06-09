@@ -6,57 +6,93 @@ import {
   FlatList,
   TouchableOpacity,
   SafeAreaView,
-  StatusBar,
 } from 'react-native';
-import { routes } from '../mockData';
+import { routes, shuttles } from '../mockData';
 
 export default function RoutesListScreen({ navigation }) {
 
-  const allRoutes = routes;
+  function getShuttleForRoute(routeId) {
+    return shuttles.find(s => s.routeId === routeId);
+  }
 
-  const renderRouteCard = ({ item }) => (
-    <TouchableOpacity
-      style={styles.routeCard}
-      onPress={() => navigation.navigate('RouteDetail', { route: item })}
-    >
-      <View style={[styles.colorBar, { backgroundColor: item.color || '#007AFF' }]} />
-      
-      <View style={styles.routeInfo}>
-        <Text style={styles.routeName}>{item.name}</Text>
-        <Text style={styles.routeDetails}>
-          {item.stops} stops • {item.loopTime} loop
-        </Text>
-        
-        <View style={styles.statusRow}>
-          <View style={[
-            styles.statusDot, 
-            { backgroundColor: item.status === 'Has Space' ? '#4CAF50' : 
-                               item.status === 'Currently full' ? '#FF9800' : '#F44336' }
-          ]} />
-          <Text style={styles.statusText}>{item.status}</Text>
+  function getStatusLabel(status) {
+    if (status === 'HAS_SPACE') return 'Has space';
+    if (status === 'FULL') return 'Full';
+    return 'Inactive';
+  }
+
+  function getStatusColor(status) {
+    if (status === 'HAS_SPACE') return '#1C6B2A';
+    if (status === 'FULL') return '#E63946';
+    return '#6B7280';
+  }
+
+  function getBadgeStyle(status) {
+    if (status === 'HAS_SPACE') return styles.badgeGreen;
+    if (status === 'FULL') return styles.badgeRed;
+    return styles.badgeGrey;
+  }
+
+  function getBadgeTextStyle(status) {
+    if (status === 'HAS_SPACE') return styles.badgeTextGreen;
+    if (status === 'FULL') return styles.badgeTextRed;
+    return styles.badgeTextGrey;
+  }
+
+  const renderRouteCard = ({ item }) => {
+    const shuttle = getShuttleForRoute(item.routeId);
+    const status = shuttle ? shuttle.status : 'INACTIVE';
+
+    return (
+      <TouchableOpacity
+        style={styles.routeCard}
+        onPress={() => navigation.navigate('RouteDetail', { route: item, shuttle })}
+      >
+        {/* Color bar */}
+        <View style={[styles.colorBar, { backgroundColor: item.color }]} />
+
+        {/* Route info */}
+        <View style={styles.routeInfo}>
+          <Text style={styles.routeName}>{item.name}</Text>
+          <Text style={styles.routeDetails}>
+            {item.totalStops} stops · ~{item.loopTimeMinutes} min loop
+          </Text>
+          <View style={styles.statusRow}>
+            <View style={[styles.statusDot, { backgroundColor: getStatusColor(status) }]} />
+            <Text style={styles.statusText}>{getStatusLabel(status)}</Text>
+          </View>
         </View>
-      </View>
-      
-      <View style={styles.arrivalInfo}>
-        <Text style={styles.arrivalLabel}>Next</Text>
-        <Text style={styles.arrivalTime}>{item.nextArrival}</Text>
-      </View>
-    </TouchableOpacity>
-  );
+
+        {/* Arrival info */}
+        <View style={styles.arrivalInfo}>
+          <Text style={styles.arrivalLabel}>Next</Text>
+          <Text style={styles.arrivalTime}>
+            {shuttle?.etaMinutes ? `${shuttle.etaMinutes} min` : 'N/A'}
+          </Text>
+        </View>
+
+        {/* Badge */}
+        <View style={[styles.badge, getBadgeStyle(status)]}>
+          <Text style={getBadgeTextStyle(status)}>
+            {getStatusLabel(status)}
+          </Text>
+        </View>
+
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-      
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>All Routes</Text>
-        <Text style={styles.headerSubtitle}>Select a route to see details</Text>
+        <Text style={styles.headerTitle}>Routes</Text>
+        <Text style={styles.headerSubtitle}>{routes.length} active routes on campus</Text>
       </View>
-      
+
       <FlatList
-        data={allRoutes}
+        data={routes}
         renderItem={renderRouteCard}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.routeId}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
       />
@@ -67,24 +103,24 @@ export default function RoutesListScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F7F8F5',
   },
   header: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 20,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 24,
     paddingTop: 20,
-    paddingBottom: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    paddingBottom: 16,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#E0E0DC',
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#1A1A1A',
   },
   headerSubtitle: {
     fontSize: 14,
-    color: '#666',
+    color: '#6B7280',
     marginTop: 4,
   },
   listContent: {
@@ -92,65 +128,72 @@ const styles = StyleSheet.create({
   },
   routeCard: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
     marginBottom: 12,
     padding: 16,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    borderWidth: 0.5,
+    borderColor: '#E0E0DC',
+    gap: 12,
   },
   colorBar: {
     width: 4,
-    height: 60,
+    height: 56,
     borderRadius: 2,
-    marginRight: 16,
   },
   routeInfo: {
     flex: 1,
+    gap: 4,
   },
   routeName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1a1a1a',
-    marginBottom: 4,
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1A1A1A',
   },
   routeDetails: {
     fontSize: 12,
-    color: '#666',
-    marginBottom: 8,
+    color: '#6B7280',
   },
   statusRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 5,
   },
   statusDot: {
-    width: 8,
-    height: 8,
+    width: 7,
+    height: 7,
     borderRadius: 4,
-    marginRight: 6,
   },
   statusText: {
     fontSize: 12,
-    color: '#666',
+    color: '#6B7280',
   },
   arrivalInfo: {
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    backgroundColor: '#F7F8F5',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 8,
   },
   arrivalLabel: {
     fontSize: 10,
-    color: '#999',
+    color: '#6B7280',
   },
   arrivalTime: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#007AFF',
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1C6B2A',
   },
+  badge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 50,
+  },
+  badgeGreen: { backgroundColor: '#EAF5EC' },
+  badgeRed: { backgroundColor: '#FFF0F0' },
+  badgeGrey: { backgroundColor: '#F3F4F6' },
+  badgeTextGreen: { fontSize: 10, fontWeight: '700', color: '#1C6B2A' },
+  badgeTextRed: { fontSize: 10, fontWeight: '700', color: '#E63946' },
+  badgeTextGrey: { fontSize: 10, fontWeight: '700', color: '#6B7280' },
 });

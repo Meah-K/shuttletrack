@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -6,154 +6,137 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
-  StatusBar,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function RouteDetailScreen({ navigation, route }) {
-  const [selectedDestination, setSelectedDestination] = useState('Main Gate');
-  
-  // Route data matching your Figma
-  const routeData = {
-    name: 'Route A - Main Gate',
-    stops: 5,
-    loopTime: '12 min',
-    status: 'Has Space',
-    nextArrival: '4 min',
-    walkingTime: '8 min',
-    walkingDistance: '~450m straight line',
-    stopsList: [
-      { name: 'Main Gate', type: 'Starting point', time: '4 min' },
-      { name: 'Unity Hall', type: 'Stop 2', time: '9 min' },
-      { name: 'SRC Bus Stop', type: 'Stop 3', time: '14 min' },
-      { name: 'Paa Joe', type: 'Stop 4', time: '18 min' },
-    ]
-  };
+  const { route: shuttleRoute, shuttle } = route.params;
+  const status = shuttle ? shuttle.status : 'INACTIVE';
 
-  const otherRoutes = [
-    { name: 'Paa Joe Route', stops: 4, loopTime: '~10 min loop', status: 'Currently full' },
-    { name: 'SRC Route', stops: 6, loopTime: '~15 min loop', status: 'No shuttle active' },
-  ];
+  function getStatusLabel(status) {
+    if (status === 'HAS_SPACE') return 'Has space';
+    if (status === 'FULL') return 'Full';
+    return 'Inactive';
+  }
+
+  function getStatusColor(status) {
+    if (status === 'HAS_SPACE') return '#1C6B2A';
+    if (status === 'FULL') return '#E63946';
+    return '#6B7280';
+  }
+
+  function getStatusBg(status) {
+    if (status === 'HAS_SPACE') return '#EAF5EC';
+    if (status === 'FULL') return '#FFF0F0';
+    return '#F3F4F6';
+  }
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-      
+
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backArrow}>←</Text>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons name="arrow-back" size={20} color="#1A1A1A" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Route Details</Text>
-        <View style={{ width: 40 }} />
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>{shuttleRoute.shortName}</Text>
+          <Text style={styles.headerSub}>{shuttleRoute.totalStops} stops</Text>
+        </View>
+        <View style={[styles.statusPill, { backgroundColor: getStatusBg(status) }]}>
+          <Text style={[styles.statusPillText, { color: getStatusColor(status) }]}>
+            {getStatusLabel(status)}
+          </Text>
+        </View>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        
-        {/* Main Route Card */}
-        <View style={styles.mainRouteCard}>
-          <Text style={styles.routeTitle}>{routeData.name}</Text>
-          <Text style={styles.routeSubtitle}>{routeData.stops} stops, ~ {routeData.loopTime} loop</Text>
-          
-          <View style={styles.statusContainer}>
-            <View style={styles.statusBadge}>
-              <Text style={styles.statusText}>✅ {routeData.status}</Text>
+
+        {/* ETA hero block */}
+        <View style={styles.etaHero}>
+          <View style={styles.etaLeft}>
+            <Text style={styles.etaLabel}>NEXT ARRIVAL</Text>
+            <Text style={styles.etaValue}>
+              {shuttle?.etaMinutes ? `${shuttle.etaMinutes} min` : 'N/A'}
+            </Text>
+            <Text style={styles.etaUpdated}>Updated {shuttle?.lastUpdated || 'recently'}</Text>
+          </View>
+          <View style={styles.etaRight}>
+            <View style={styles.etaStat}>
+              <Text style={styles.etaStatValue}>~{shuttleRoute.loopTimeMinutes}</Text>
+              <Text style={styles.etaStatLabel}>min loop</Text>
             </View>
-            <View style={styles.arrivalContainer}>
-              <Text style={styles.arrivalLabel}>Next arrival</Text>
-              <Text style={styles.arrivalTime}>{routeData.nextArrival}</Text>
-            </View>
-            <View style={styles.loopContainer}>
-              <Text style={styles.loopLabel}>Loop time</Text>
-              <Text style={styles.loopTime}>{routeData.loopTime}</Text>
+            <View style={styles.etaStatDivider} />
+            <View style={styles.etaStat}>
+              <Text style={styles.etaStatValue}>{shuttleRoute.totalStops}</Text>
+              <Text style={styles.etaStatLabel}>stops</Text>
             </View>
           </View>
         </View>
 
-        {/* All Stops Section */}
-        <View style={styles.stopsSection}>
+        {/* Mini map */}
+        <View style={styles.miniMap}>
+          <Ionicons name="map" size={32} color="#1C6B2A" />
+          <Text style={styles.miniMapText}>Route map</Text>
+          <View style={styles.livePill}>
+            <View style={styles.liveDot} />
+            <Text style={styles.liveText}>Live</Text>
+          </View>
+        </View>
+
+        {/* Stops */}
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>All stops</Text>
-          {routeData.stopsList.map((stop, index) => (
-            <View key={index} style={styles.stopItem}>
-              <View style={styles.stopDotContainer}>
-                <View style={styles.stopDot} />
-                {index < routeData.stopsList.length - 1 && <View style={styles.stopLine} />}
+          {shuttleRoute.stops.map((stop, index) => (
+            <View key={stop.stopId}>
+              <View style={styles.stopRow}>
+                <View style={styles.stopIndicator}>
+                  <View style={[
+                    styles.stopDot,
+                    index === 0 && styles.stopDotActive
+                  ]} />
+                  {index < shuttleRoute.stops.length - 1 && (
+                    <View style={styles.stopLine} />
+                  )}
+                </View>
+                <View style={styles.stopContent}>
+                  <Text style={[
+                    styles.stopName,
+                    index !== 0 && styles.stopNameMuted
+                  ]}>
+                    {stop.name}
+                  </Text>
+                  <Text style={styles.stopType}>
+                    {index === 0 ? 'Starting point' :
+                     index === shuttleRoute.stops.length - 1 ? 'End / loop back' :
+                     `Stop ${index + 1}`}
+                  </Text>
+                </View>
+                <Text style={[
+                  styles.stopEta,
+                  index === 0 && styles.stopEtaActive
+                ]}>
+                  {shuttle?.etaMinutes ? `${shuttle.etaMinutes + index * 5} min` : 'N/A'}
+                </Text>
               </View>
-              <View style={styles.stopContent}>
-                <Text style={styles.stopName}>{stop.name}</Text>
-                <Text style={styles.stopType}>{stop.type}</Text>
-              </View>
-              <Text style={styles.stopTime}>{stop.time}</Text>
             </View>
           ))}
         </View>
 
-        {/* Other Routes Section */}
-        <View style={styles.otherRoutesSection}>
-          <Text style={styles.sectionTitle}>Other Routes</Text>
-          {otherRoutes.map((route, index) => (
-            <TouchableOpacity key={index} style={styles.otherRouteCard}>
-              <View>
-                <Text style={styles.otherRouteName}>{route.name}</Text>
-                <Text style={styles.otherRouteInfo}>{route.stops} stops, {route.loopTime}</Text>
-              </View>
-              <Text style={[
-                styles.otherRouteStatus,
-                route.status === 'Currently full' && styles.statusFull,
-                route.status === 'No shuttle active' && styles.statusInactive
-              ]}>
-                {route.status}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Walk or Wait Section - RECOMMENDATION */}
-        <View style={styles.recommendationSection}>
-          <Text style={styles.recommendationTitle}>🚶 Walk or wait?</Text>
-          
-          {/* Destination Selector */}
-          <View style={styles.destinationSelector}>
-            <Text style={styles.destinationLabel}>Where are you going?</Text>
-            <View style={styles.destinationButtons}>
-              <TouchableOpacity 
-                style={[styles.destButton, selectedDestination === 'Main Gate' && styles.activeDestButton]}
-                onPress={() => setSelectedDestination('Main Gate')}>
-                <Text style={[styles.destButtonText, selectedDestination === 'Main Gate' && styles.activeDestText]}>Main Gate</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.destButton, selectedDestination === 'Paa Joe' && styles.activeDestButton]}
-                onPress={() => setSelectedDestination('Paa Joe')}>
-                <Text style={[styles.destButtonText, selectedDestination === 'Paa Joe' && styles.activeDestText]}>Paa Joe</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.destButton, selectedDestination === 'SRC' && styles.activeDestButton]}
-                onPress={() => setSelectedDestination('SRC')}>
-                <Text style={[styles.destButtonText, selectedDestination === 'SRC' && styles.activeDestText]}>SRC</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Recommendation Card */}
-          <View style={styles.recommendationCard}>
-            <Text style={styles.recommendationLabel}>RECOMMENDATION</Text>
-            <Text style={styles.recommendationValue}>🚌 Wait</Text>
-            <Text style={styles.recommendationDetail}>Shuttle arrives in {routeData.nextArrival}</Text>
-            
-            <View style={styles.comparisonContainer}>
-              <View style={styles.comparisonItem}>
-                <Text style={styles.comparisonLabel}>Walking time</Text>
-                <Text style={styles.comparisonValue}>🚶 {routeData.walkingTime}</Text>
-                <Text style={styles.comparisonDistance}>{routeData.walkingDistance}</Text>
-              </View>
-              <View style={styles.comparisonDivider} />
-              <View style={styles.comparisonItem}>
-                <Text style={styles.comparisonLabel}>Wait time</Text>
-                <Text style={styles.comparisonValue}>⏱️ {routeData.nextArrival}</Text>
-                <Text style={styles.comparisonDistance}>Shuttle arrives soon</Text>
-              </View>
-            </View>
-          </View>
-        </View>
+        {/* Walk or Wait CTA */}
+        {shuttle && (
+          <TouchableOpacity
+            style={styles.ctaButton}
+            onPress={() => navigation.navigate('WalkOrWait', { shuttle })}
+          >
+            <Ionicons name="walk" size={20} color="#FFFFFF" />
+            <Text style={styles.ctaText}>Walk or Wait?</Text>
+            <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+        )}
 
       </ScrollView>
     </SafeAreaView>
@@ -163,278 +146,217 @@ export default function RouteDetailScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F7F8F5',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#fff',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    paddingVertical: 14,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#E0E0DC',
+    gap: 12,
   },
   backButton: {
-    padding: 8,
-    marginLeft: -8,
+    width: 36,
+    height: 36,
+    backgroundColor: '#F7F8F5',
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  backArrow: {
-    fontSize: 28,
-    color: '#007AFF',
+  headerCenter: {
+    flex: 1,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#1a1a1a',
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#1A1A1A',
   },
-  mainRouteCard: {
-    backgroundColor: '#fff',
-    margin: 16,
-    padding: 16,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+  headerSub: {
+    fontSize: 12,
+    color: '#6B7280',
   },
-  routeTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-  },
-  routeSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 4,
-  },
-  statusContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-  },
-  statusBadge: {
-    backgroundColor: '#E8F5E9',
+  statusPill: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: 50,
   },
-  statusText: {
-    color: '#4CAF50',
-    fontWeight: '500',
+  statusPillText: {
     fontSize: 12,
+    fontWeight: '700',
   },
-  arrivalContainer: {
+  etaHero: {
+    backgroundColor: '#1C6B2A',
+    margin: 16,
+    borderRadius: 16,
+    padding: 20,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  arrivalLabel: {
-    fontSize: 10,
-    color: '#999',
+  etaLeft: {
+    gap: 4,
   },
-  arrivalTime: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#007AFF',
+  etaLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.7)',
+    letterSpacing: 0.8,
   },
-  loopContainer: {
+  etaValue: {
+    fontSize: 36,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    lineHeight: 42,
+  },
+  etaUpdated: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.6)',
+  },
+  etaRight: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 16,
   },
-  loopLabel: {
-    fontSize: 10,
-    color: '#999',
+  etaStat: {
+    alignItems: 'center',
+    gap: 2,
   },
-  loopTime: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
+  etaStatValue: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
-  stopsSection: {
-    backgroundColor: '#fff',
+  etaStatLabel: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.7)',
+  },
+  etaStatDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+  },
+  miniMap: {
+    backgroundColor: '#E8F0E8',
     marginHorizontal: 16,
     marginBottom: 16,
-    padding: 16,
-    borderRadius: 12,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 16,
-    color: '#1a1a1a',
-  },
-  stopItem: {
-    flexDirection: 'row',
-    marginBottom: 12,
+    borderRadius: 14,
+    height: 120,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
     position: 'relative',
   },
-  stopDotContainer: {
-    width: 24,
+  miniMapText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1C6B2A',
+  },
+  livePill: {
+    position: 'absolute',
+    bottom: 10,
+    right: 10,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 12,
+    gap: 4,
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#1C6B2A',
+  },
+  liveText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#1C6B2A',
+  },
+  section: {
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 14,
+    borderWidth: 0.5,
+    borderColor: '#E0E0DC',
+    padding: 16,
+  },
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    marginBottom: 16,
+  },
+  stopRow: {
+    flexDirection: 'row',
+    gap: 12,
+    minHeight: 44,
+  },
+  stopIndicator: {
+    width: 12,
+    alignItems: 'center',
   },
   stopDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#007AFF',
-    marginTop: 6,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#D0D0CC',
+    marginTop: 4,
+  },
+  stopDotActive: {
+    backgroundColor: '#1C6B2A',
   },
   stopLine: {
     width: 2,
     flex: 1,
-    backgroundColor: '#007AFF',
-    position: 'absolute',
-    top: 16,
-    bottom: -16,
-    width: 2,
+    backgroundColor: '#E0E0DC',
+    marginTop: 4,
   },
   stopContent: {
     flex: 1,
+    gap: 2,
   },
   stopName: {
-    fontSize: 16,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1A1A1A',
+  },
+  stopNameMuted: {
     fontWeight: '500',
-    color: '#1a1a1a',
+    color: '#6B7280',
   },
   stopType: {
-    fontSize: 12,
-    color: '#999',
-    marginTop: 2,
-  },
-  stopTime: {
-    fontSize: 14,
-    color: '#666',
-  },
-  otherRoutesSection: {
-    marginHorizontal: 16,
-    marginBottom: 16,
-  },
-  otherRouteCard: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 8,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  otherRouteName: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#1a1a1a',
-  },
-  otherRouteInfo: {
-    fontSize: 12,
-    color: '#999',
-    marginTop: 4,
-  },
-  otherRouteStatus: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#4CAF50',
-  },
-  statusFull: {
-    color: '#FF9800',
-  },
-  statusInactive: {
-    color: '#F44336',
-  },
-  recommendationSection: {
-    marginHorizontal: 16,
-    marginBottom: 30,
-  },
-  recommendationTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  destinationSelector: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-  },
-  destinationLabel: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 12,
-  },
-  destinationButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  destButton: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
-  },
-  activeDestButton: {
-    backgroundColor: '#007AFF',
-  },
-  destButtonText: {
-    color: '#666',
-    fontWeight: '500',
-  },
-  activeDestText: {
-    color: '#fff',
-  },
-  recommendationCard: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#4CAF50',
-  },
-  recommendationLabel: {
-    fontSize: 12,
-    color: '#4CAF50',
-    fontWeight: '600',
-    letterSpacing: 1,
-  },
-  recommendationValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#4CAF50',
-    marginTop: 8,
-  },
-  recommendationDetail: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 4,
-  },
-  comparisonContainer: {
-    flexDirection: 'row',
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-  },
-  comparisonItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  comparisonDivider: {
-    width: 1,
-    backgroundColor: '#e0e0e0',
-  },
-  comparisonLabel: {
-    fontSize: 12,
-    color: '#999',
-    marginBottom: 8,
-  },
-  comparisonValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1a1a1a',
-    marginBottom: 4,
-  },
-  comparisonDistance: {
     fontSize: 11,
-    color: '#999',
+    color: '#9CA3AF',
+  },
+  stopEta: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginTop: 4,
+  },
+  stopEtaActive: {
+    color: '#1C6B2A',
+    fontWeight: '600',
+  },
+  ctaButton: {
+    backgroundColor: '#1C6B2A',
+    borderRadius: 50,
+    paddingVertical: 16,
+    marginHorizontal: 16,
+    marginBottom: 32,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  ctaText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });

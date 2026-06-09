@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Ionicons } from '@expo/vector-icons';
 import {
   View,
   Text,
@@ -11,8 +10,9 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
-export default function LoginScreen({ navigation }) {
+export default function DriverLoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -24,7 +24,7 @@ export default function LoginScreen({ navigation }) {
       return;
     }
     setError('');
-    navigation.navigate('Main');
+    navigation.replace('DriverStatus');
   }
 
   return (
@@ -35,6 +35,15 @@ export default function LoginScreen({ navigation }) {
       >
         <ScrollView showsVerticalScrollIndicator={false}>
 
+          {/* Back button */}
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons name="arrow-back" size={20} color="#1A1A1A" />
+            <Text style={styles.backText}>Back to login</Text>
+          </TouchableOpacity>
+
           {/* Logo row */}
           <View style={styles.logoRow}>
             <View style={styles.logoIcon}>
@@ -44,14 +53,14 @@ export default function LoginScreen({ navigation }) {
           </View>
 
           {/* Title */}
-          <Text style={styles.title}>Welcome back 👋</Text>
-          <Text style={styles.subtitle}>Log in to track your shuttle</Text>
+          <Text style={styles.title}>Driver login</Text>
+          <Text style={styles.subtitle}>Sign in to start sharing your location</Text>
 
-          {/* Email field */}
-          <Text style={styles.label}>Email address</Text>
+          {/* Email */}
+          <Text style={styles.label}>Email</Text>
           <TextInput
             style={styles.input}
-            placeholder="you@st.knust.edu.gh"
+            placeholder="driver@knust.edu.gh"
             placeholderTextColor="#6B7280"
             value={email}
             onChangeText={setEmail}
@@ -59,7 +68,7 @@ export default function LoginScreen({ navigation }) {
             autoCapitalize="none"
           />
 
-          {/* Password field */}
+          {/* Password */}
           <Text style={styles.label}>Password</Text>
           <View style={styles.passwordContainer}>
             <TextInput
@@ -78,49 +87,21 @@ export default function LoginScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          {/* Forgot password */}
-          <TouchableOpacity style={styles.forgotRow}>
-            <Text style={styles.forgotText}>Forgot password?</Text>
-          </TouchableOpacity>
-
-          {/* Error message */}
+          {/* Error */}
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
           {/* Login button */}
           <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-            <Text style={styles.loginButtonText}>Log in</Text>
+            <Text style={styles.loginButtonText}>Log in as driver</Text>
           </TouchableOpacity>
 
-          {/* Divider */}
-          <View style={styles.dividerRow}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or continue with</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {/* Google button */}
-          <TouchableOpacity style={styles.googleButton}>
-            <View style={styles.googleIconCircle}>
-              <Text style={styles.googleGText}>G</Text>
-            </View>
-            <Text style={styles.googleButtonText}>Continue with Google</Text>
-          </TouchableOpacity>
-
-          {/* Sign up link */}
-          <View style={styles.signupRow}>
-            <Text style={styles.signupText}>Don't have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-              <Text style={styles.signupLink}>Sign up</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Driver link */}
+          {/* Student link */}
           <TouchableOpacity
-            style={styles.driverRow}
-            onPress={() => navigation.navigate('DriverLogin')}
+            style={styles.studentRow}
+            onPress={() => navigation.goBack()}
           >
-            <Ionicons name="bus-outline" size={16} color="#6B7280" />
-            <Text style={styles.driverText}>I'm a driver</Text>
+            <Ionicons name="person-outline" size={16} color="#6B7280" />
+            <Text style={styles.studentText}>I'm a student</Text>
           </TouchableOpacity>
 
         </ScrollView>
@@ -139,12 +120,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 20,
   },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 32,
+    marginTop: 10,
+  },
+  backText: {
+    fontSize: 14,
+    color: '#1A1A1A',
+    fontWeight: '500',
+  },
   logoRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    marginBottom: 32,
-    marginTop: 10,
+    marginBottom: 40,
   },
   logoIcon: {
     width: 36,
@@ -207,15 +199,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1C6B2A',
   },
-  forgotRow: {
-    alignItems: 'flex-end',
-    marginBottom: 24,
-  },
-  forgotText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#1C6B2A',
-  },
   errorText: {
     fontSize: 13,
     color: '#E63946',
@@ -227,6 +210,7 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     paddingVertical: 16,
     alignItems: 'center',
+    marginTop: 8,
     marginBottom: 24,
   },
   loginButtonText: {
@@ -234,74 +218,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
   },
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 16,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#D1D5DB',
-  },
-  dividerText: {
-    fontSize: 13,
-    color: '#6B7280',
-  },
-  googleButton: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#D1D5DB',
-    borderRadius: 50,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    marginBottom: 24,
-  },
-  googleIconCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#EA4335',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  googleGText: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  googleButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#1A1A1A',
-  },
-  signupRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  signupText: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  signupLink: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1C6B2A',
-  },
-  driverRow: {
+  studentRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
     marginBottom: 32,
   },
-  driverText: {
+  studentText: {
     fontSize: 14,
     color: '#6B7280',
     fontWeight: '500',

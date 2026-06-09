@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import {
   View,
   Text,
@@ -6,117 +7,111 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
-  StatusBar,
-  Image,
   Switch,
 } from 'react-native';
+import { currentStudent } from '../mockData';
 
 export default function ProfileScreen({ navigation }) {
-  const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
-  const [darkMode, setDarkMode] = React.useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
-  // Student user data - replace with actual data from mockData.js later
-  const userData = {
-    name: 'Shila Boateng',
-    email: 'shila.b@shuttletrack.com',
-    studentId: 'STU-2024-1234',
-    role: 'Student',
-    joinDate: 'January 2025',
-    profileImage: null, // will use placeholder
-  };
+  function handleLogout() {
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'Login' }],
+    });
+  }
 
   const menuItems = [
-    { icon: '🚗', title: 'My Trips', subtitle: 'View trip history' },
-    { icon: '⭐', title: 'Saved Routes', subtitle: 'Your favorite routes' },
-    { icon: '🔔', title: 'Notifications', subtitle: 'Manage alerts', hasSwitch: true, value: notificationsEnabled, setValue: setNotificationsEnabled },
-    { icon: '🌙', title: 'Dark Mode', subtitle: 'Change theme', hasSwitch: true, value: darkMode, setValue: setDarkMode },
-    { icon: '❓', title: 'Help Center', subtitle: 'FAQs and support' },
-    { icon: '📜', title: 'Terms & Privacy', subtitle: 'Legal information' },
-    { icon: '🚪', title: 'Log Out', subtitle: 'Sign out of your account', isDanger: true },
+  {
+    icon: 'notifications-outline',
+    title: 'Push notifications',
+    subtitle: 'Manage alerts',
+    hasSwitch: true,
+    value: notificationsEnabled,
+    setValue: setNotificationsEnabled,
+  },
+  {
+    icon: 'information-circle-outline',
+    title: 'About ShuttleTrack',
+    subtitle: 'Version 1.0.0',
+  },
+  {
+    icon: 'document-text-outline',
+    title: 'Terms & Privacy',
+    subtitle: 'Legal information',
+  },
+
   ];
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-      
       <ScrollView showsVerticalScrollIndicator={false}>
-        
-        {/* Header with back button */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={styles.backArrow}>←</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Profile</Text>
-          <TouchableOpacity style={styles.editButton}>
-            <Text style={styles.editButtonText}>Edit</Text>
-          </TouchableOpacity>
+
+        {/* Title */}
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>Profile</Text>
         </View>
 
-        {/* Profile Image and Name */}
-        <View style={styles.profileSection}>
-          <View style={styles.profileImageContainer}>
-            <Text style={styles.profileImagePlaceholder}>👤</Text>
+        {/* Avatar section */}
+        <View style={styles.avatarSection}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>
+              {currentStudent.name.charAt(0)}
+            </Text>
           </View>
-          <Text style={styles.userName}>{userData.name}</Text>
-          <Text style={styles.userRole}>{userData.role}</Text>
+          <Text style={styles.name}>{currentStudent.name}</Text>
+          <Text style={styles.role}>Student</Text>
         </View>
 
-        {/* User Info Card */}
-        <View style={styles.infoCard}>
+        {/* Info card */}
+        <View style={styles.card}>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Email</Text>
-            <Text style={styles.infoValue}>{userData.email}</Text>
+            <Text style={styles.infoLabel}>Full name</Text>
+            <Text style={styles.infoValue}>{currentStudent.name}</Text>
           </View>
           <View style={styles.divider} />
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Student ID</Text>
-            <Text style={styles.infoValue}>{userData.studentId}</Text>
+            <Text style={styles.infoValue}>{currentStudent.studentId}</Text>
           </View>
           <View style={styles.divider} />
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Member since</Text>
-            <Text style={styles.infoValue}>{userData.joinDate}</Text>
+            <Text style={styles.infoLabel}>Email</Text>
+            <Text style={styles.infoValue}>{currentStudent.email}</Text>
           </View>
         </View>
 
-        {/* Menu Items */}
-        <View style={styles.menuSection}>
+        {/* Settings card */}
+        <View style={styles.card}>
           {menuItems.map((item, index) => (
-            <TouchableOpacity 
-              key={index} 
-              style={styles.menuItem}
-              onPress={() => {
-                if (item.title === 'Log Out') {
-                  // Handle logout - navigate to login screen
-                  navigation.navigate('Login');
-                }
-              }}
-            >
-              <View style={styles.menuIconContainer}>
-                <Text style={styles.menuIcon}>{item.icon}</Text>
+            <View key={index}>
+              <View style={styles.menuItem}>
+                <View style={styles.menuIconBox}>
+<Ionicons name={item.icon} size={20} color="#1C6B2A" />                </View>
+                <View style={styles.menuContent}>
+                  <Text style={styles.menuTitle}>{item.title}</Text>
+                  <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
+                </View>
+                {item.hasSwitch ? (
+                  <Switch
+                    value={item.value}
+                    onValueChange={item.setValue}
+                    trackColor={{ false: '#D0D0CC', true: '#1C6B2A' }}
+                    thumbColor="#FFFFFF"
+                  />
+                ) : (
+                  <Text style={styles.chevron}>›</Text>
+                )}
               </View>
-              <View style={styles.menuContent}>
-                <Text style={[styles.menuTitle, item.isDanger && styles.dangerText]}>
-                  {item.title}
-                </Text>
-                <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
-              </View>
-              {item.hasSwitch ? (
-                <Switch
-                  value={item.value}
-                  onValueChange={item.setValue}
-                  trackColor={{ false: '#d0d0d0', true: '#007AFF' }}
-                  thumbColor="#fff"
-                />
-              ) : (
-                <Text style={styles.menuArrow}>›</Text>
-              )}
-            </TouchableOpacity>
+              {index < menuItems.length - 1 && <View style={styles.divider} />}
+            </View>
           ))}
         </View>
 
-        {/* App Version */}
-        <Text style={styles.versionText}>Version 1.0.0</Text>
+        {/* Logout button */}
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Text style={styles.logoutText}>Log out</Text>
+        </TouchableOpacity>
 
       </ScrollView>
     </SafeAreaView>
@@ -126,118 +121,88 @@ export default function ProfileScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F7F8F5',
   },
-  header: {
-    flexDirection: 'row',
+  titleRow: {
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 8,
+  },
+  title: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#1A1A1A',
+  },
+  avatarSection: {
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  backButton: {
-    padding: 8,
-    marginLeft: -8,
-  },
-  backArrow: {
-    fontSize: 28,
-    color: '#007AFF',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#1a1a1a',
-  },
-  editButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
-  },
-  editButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  profileSection: {
-    alignItems: 'center',
-    backgroundColor: '#fff',
     paddingVertical: 24,
-    marginBottom: 16,
   },
-  profileImageContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#007AFF',
-    justifyContent: 'center',
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#EAF5EC',
+    borderWidth: 2,
+    borderColor: '#1C6B2A',
     alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 12,
   },
-  profileImagePlaceholder: {
-    fontSize: 48,
-    color: '#fff',
+  avatarText: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#1C6B2A',
   },
-  userName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
+  name: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    marginBottom: 4,
   },
-  userRole: {
+  role: {
     fontSize: 14,
-    color: '#007AFF',
-    marginTop: 4,
+    color: '#6B7280',
   },
-  infoCard: {
-    backgroundColor: '#fff',
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 0.5,
+    borderColor: '#E0E0DC',
     marginHorizontal: 16,
-    marginBottom: 16,
-    padding: 16,
-    borderRadius: 12,
+    marginBottom: 12,
+    overflow: 'hidden',
   },
   infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
+    padding: 14,
+    gap: 3,
   },
   infoLabel: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 11,
+    color: '#6B7280',
   },
   infoValue: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#1a1a1a',
+    fontWeight: '600',
+    color: '#1A1A1A',
   },
   divider: {
-    height: 1,
-    backgroundColor: '#e0e0e0',
-  },
-  menuSection: {
-    backgroundColor: '#fff',
-    marginHorizontal: 16,
-    marginBottom: 16,
-    borderRadius: 12,
-    overflow: 'hidden',
+    height: 0.5,
+    backgroundColor: '#F0F0EC',
+    marginLeft: 14,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    padding: 14,
+    gap: 12,
   },
-  menuIconContainer: {
+  menuIconBox: {
     width: 36,
     height: 36,
-    borderRadius: 18,
-    backgroundColor: '#f0f0f0',
-    justifyContent: 'center',
+    borderRadius: 10,
+    backgroundColor: '#F7F8F5',
     alignItems: 'center',
-    marginRight: 12,
+    justifyContent: 'center',
   },
   menuIcon: {
     fontSize: 18,
@@ -246,26 +211,30 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   menuTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#1a1a1a',
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1A1A1A',
   },
   menuSubtitle: {
     fontSize: 12,
-    color: '#666',
-    marginTop: 2,
+    color: '#6B7280',
+    marginTop: 1,
   },
-  menuArrow: {
-    fontSize: 24,
-    color: '#ccc',
+  chevron: {
+    fontSize: 22,
+    color: '#D0D0CC',
   },
-  dangerText: {
-    color: '#F44336',
+  logoutButton: {
+    backgroundColor: '#FFF0F0',
+    borderRadius: 50,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginBottom: 32,
   },
-  versionText: {
-    textAlign: 'center',
-    fontSize: 12,
-    color: '#999',
-    marginBottom: 30,
+  logoutText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#E63946',
   },
 });

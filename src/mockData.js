@@ -9,10 +9,11 @@
 
 
 // ─── CURRENT LOGGED-IN STUDENT ───────────────────────────────
+
 export const currentStudent = {
   userId: "student-001",
-  name: "Abena Ampofo",
-  studentId: "21100173",
+  name: "Abena Mensah",
+  studentId: "20100456",
   email: "abena@st.knust.edu.gh",
   role: "STUDENT",
 };
