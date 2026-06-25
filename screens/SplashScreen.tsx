@@ -1,5 +1,4 @@
-import React, { useEffect } from 'react';
- import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,14 +6,26 @@ import {
   Animated,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { StackNavigationProp } from '@react-navigation/stack';
 
-export default function SplashScreen({ navigation }) {
-  const dot1 = new Animated.Value(0.3);
-  const dot2 = new Animated.Value(0.3);
-  const dot3 = new Animated.Value(0.3);
+type RootStackParamList = {
+  Splash: undefined;
+  Onboarding: undefined;
+  Main: undefined;
+};
+
+type SplashScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Splash'>;
+
+interface SplashScreenProps {
+  navigation: SplashScreenNavigationProp;
+}
+
+export default function SplashScreen({ navigation }: SplashScreenProps): React.JSX.Element {
+  const dot1 = useRef(new Animated.Value(0.3)).current;
+  const dot2 = useRef(new Animated.Value(0.3)).current;
+  const dot3 = useRef(new Animated.Value(0.3)).current;
 
   useEffect(() => {
-    // Animate loading dots
     Animated.loop(
       Animated.sequence([
         Animated.timing(dot1, { toValue: 1, duration: 400, useNativeDriver: true }),
@@ -44,23 +55,16 @@ export default function SplashScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-
-      {/* Icon box */}
       <View style={styles.iconBox}>
-      <Ionicons name="bus" size={40} color="#1C6B2A" />
+        <Text style={styles.busEmoji}>🚌</Text>
       </View>
-
-      {/* App name */}
       <Text style={styles.appName}>ShuttleTrack</Text>
       <Text style={styles.tagline}>Know before you go</Text>
-
-      {/* Loading dots */}
       <View style={styles.dotsRow}>
         <Animated.View style={[styles.dot, { opacity: dot1 }]} />
         <Animated.View style={[styles.dot, { opacity: dot2 }]} />
         <Animated.View style={[styles.dot, { opacity: dot3 }]} />
       </View>
-
     </View>
   );
 }

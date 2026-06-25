@@ -1,25 +1,104 @@
 // ============================================================
-// ShuttleTrack — mockData.js
+// ShuttleTrack — mockData.ts
 // Group 7 | CodeQuest 2026 | KNUST
 // ============================================================
-// This file is the shared fake database for the entire app.
-// Every screen reads from here during frontend development.
-// When the real backend is ready, replace imports with API calls.
+// Shared fake database for the entire app, now with TypeScript types.
 // ============================================================
+
+
+// ─── TYPES ──────────────────────────────────────────────────
+export type ShuttleStatus = 'HAS_SPACE' | 'FULL' | 'INACTIVE';
+export type UserRole = 'STUDENT' | 'DRIVER';
+export type NotificationType = 'DELAY' | 'STATUS' | 'GENERAL';
+export type WalkOrWaitResult = 'WALK' | 'WAIT';
+
+export interface Student {
+  userId: string;
+  name: string;
+  studentId: string;
+  email: string;
+  role: UserRole;
+}
+
+export interface Driver {
+  userId: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  assignedRouteId: string;
+  shuttleId: string;
+}
+
+export interface Stop {
+  stopId: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  order: number;
+}
+
+export interface Route {
+  routeId: string;
+  name: string;
+  shortName: string;
+  color: string;
+  totalStops: number;
+  loopTimeMinutes: number;
+  stops: Stop[];
+}
+
+export interface Shuttle {
+  shuttleId: string;
+  routeId: string;
+  routeName: string;
+  driverId: string | null;
+  status: ShuttleStatus;
+  latitude: number;
+  longitude: number;
+  etaMinutes: number | null;
+  lastUpdated: string;
+}
+
+export interface AppNotification {
+  notificationId: string;
+  title: string;
+  message: string;
+  affectedRouteId: string | null;
+  affectedRouteName: string | null;
+  type: NotificationType;
+  isRead: boolean;
+  sentAt: string;
+  timeAgo: string;
+}
+
+export interface WalkOrWaitRecommendation {
+  recommendation: WalkOrWaitResult;
+  walkingTimeMinutes: number;
+  shuttleEta: number | null;
+  distanceMeters?: number;
+  reason?: string;
+}
+
+export interface MapRegion {
+  latitude: number;
+  longitude: number;
+  latitudeDelta: number;
+  longitudeDelta: number;
+}
 
 
 // ─── CURRENT LOGGED-IN STUDENT ───────────────────────────────
-export const currentStudent = {
+export const currentStudent: Student = {
   userId: "student-001",
-  name: "Abena Ampofo",
-  studentId: "21100173",
-  email: "abena@st.knust.edu.gh",
+  name: "Ama Asiamah",
+  studentId: "21100176",
+  email: "ama@st.knust.edu.gh",
   role: "STUDENT",
 };
 
 
 // ─── CURRENT LOGGED-IN DRIVER ────────────────────────────────
-export const currentDriver = {
+export const currentDriver: Driver = {
   userId: "driver-001",
   name: "Kwame Mensah",
   email: "kwame@knust.edu.gh",
@@ -30,8 +109,7 @@ export const currentDriver = {
 
 
 // ─── ROUTES ──────────────────────────────────────────────────
-// Each route has an id, name, color, and an ordered list of stops.
-export const routes = [
+export const routes: Route[] = [
   {
     routeId: "route-A",
     name: "Route A — Main Gate",
@@ -81,8 +159,7 @@ export const routes = [
 
 
 // ─── SHUTTLES ─────────────────────────────────────────────────
-// Status options: "HAS_SPACE" | "FULL" | "INACTIVE"
-export const shuttles = [
+export const shuttles: Shuttle[] = [
   {
     shuttleId: "shuttle-001",
     routeId: "route-A",
@@ -120,8 +197,7 @@ export const shuttles = [
 
 
 // ─── NOTIFICATIONS ────────────────────────────────────────────
-// isRead: false = unread (green dot shown), true = read (grey dot)
-export const notifications = [
+export const notifications: AppNotification[] = [
   {
     notificationId: "notif-001",
     title: "Route A delayed by 5 min",
@@ -186,11 +262,14 @@ export const notifications = [
 
 
 // ─── WALK OR WAIT HELPERS ─────────────────────────────────────
-// Average walking speed in km/h used for Walk or Wait calculation
 export const WALKING_SPEED_KMH = 5;
 
-// Helper function — calculate straight-line distance between two GPS points in km
-export function calculateDistanceKm(lat1, lng1, lat2, lng2) {
+export function calculateDistanceKm(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number
+): number {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLng = ((lng2 - lng1) * Math.PI) / 180;
@@ -204,11 +283,12 @@ export function calculateDistanceKm(lat1, lng1, lat2, lng2) {
   return R * c;
 }
 
-// Helper function — given a stop and a shuttle, return Walk or Wait recommendation
-// studentLat/Lng: student's current GPS position
-// destinationStop: the stop object the student wants to reach
-// shuttle: the shuttle object on that route
-export function getWalkOrWaitRecommendation(studentLat, studentLng, destinationStop, shuttle) {
+export function getWalkOrWaitRecommendation(
+  studentLat: number,
+  studentLng: number,
+  destinationStop: Stop,
+  shuttle: Shuttle | null
+): WalkOrWaitRecommendation {
   const distanceKm = calculateDistanceKm(
     studentLat,
     studentLng,
@@ -218,7 +298,7 @@ export function getWalkOrWaitRecommendation(studentLat, studentLng, destinationS
   const walkingTimeMinutes = (distanceKm / WALKING_SPEED_KMH) * 60;
   const shuttleEta = shuttle ? shuttle.etaMinutes : null;
 
-  if (!shuttleEta || shuttle.status === "FULL" || shuttle.status === "INACTIVE") {
+  if (!shuttleEta || !shuttle || shuttle.status === "FULL" || shuttle.status === "INACTIVE") {
     return {
       recommendation: "WALK",
       walkingTimeMinutes: Math.round(walkingTimeMinutes),
@@ -237,21 +317,13 @@ export function getWalkOrWaitRecommendation(studentLat, studentLng, destinationS
 
 
 // ─── ERROR / EMPTY STATE FLAGS ────────────────────────────────
-// Toggle these to test different screen states during development
-
-// Set to true to show S-14 Error screen instead of the map
-export const isNetworkError = false;
-
-// Set to true to show S-13 Empty state instead of shuttle markers
-export const isNoShuttlesActive = false;
-
-// Set to true to show D-05 Driver Error screen
-export const isDriverOffline = false;
+export const isNetworkError: boolean = false;
+export const isNoShuttlesActive: boolean = false;
+export const isDriverOffline: boolean = false;
 
 
 // ─── CAMPUS MAP CONFIG ────────────────────────────────────────
-// Centre coordinates for KNUST campus map
-export const CAMPUS_MAP_CENTER = {
+export const CAMPUS_MAP_CENTER: MapRegion = {
   latitude: 6.6736,
   longitude: -1.5727,
   latitudeDelta: 0.01,
