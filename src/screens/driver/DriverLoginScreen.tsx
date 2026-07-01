@@ -3,6 +3,7 @@ import {
   KeyboardAvoidingView, Platform, SafeAreaView, StyleSheet,
   Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
+import { authApi } from '../../lib/api';
 import { saveSession } from '../../lib/tokenStorage';
 import { colors, radius, spacing, typography } from '../../theme/colors';
 
@@ -21,18 +22,43 @@ export default function DriverLoginScreen({ navigation }: Props) {
 
   async function handleLogin() {
     setError(null);
+
+    // Basic validation
     if (!email.trim() || !password.trim()) {
       setError('Please enter your email and password');
       return;
     }
 
+    if (!email.endsWith('@knust.edu.gh')) {
+      setError('Please use your KNUST email address');
+      return;
+    }
+
     setLoading(true);
     try {
-      await new Promise((r) => setTimeout(r, 400));
-      await saveSession('mock-driver-token', 'DRIVER');
+      // 🔴 REAL API CALL — replaces the old mock token
+      const response = await authApi.driverLogin(email.trim(), password);
+      const { token, role } = response.data;
+
+      // Save the real JWT token and role to secure storage
+      await saveSession(token, role);
+
+      // Navigate to the Driver Status screen
       navigation.replace('DriverStatus');
-    } catch (e) {
-      setError('Login failed. Please try again.');
+
+    } catch (e: any) {
+      // Handle specific error responses from the backend
+      const status = e?.response?.status;
+
+      if (status === 401) {
+        setError('Wrong email or password. Please try again.');
+      } else if (status === 403) {
+        setError('This account is not registered as a driver.');
+      } else if (status === 0 || !e?.response) {
+        setError('Cannot reach the server. Check your connection.');
+      } else {
+        setError('Login failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -51,8 +77,8 @@ export default function DriverLoginScreen({ navigation }: Props) {
           <Text style={styles.brandText}>ShuttleTrack</Text>
         </View>
 
-        <Text style={styles.heading}>Driver login</Text>
-        <Text style={styles.subheading}>Sign in to start sharing your location</Text>
+        <Text style={styles.heading}>Welcome back 👋</Text>
+        <Text style={styles.subheading}>Log in to start your route</Text>
 
         <Text style={styles.label}>Email address</Text>
         <TextInput
@@ -97,8 +123,11 @@ export default function DriverLoginScreen({ navigation }: Props) {
           onPress={handleLogin}
           disabled={loading}
         >
-          <Text style={styles.buttonText}>{loading ? 'Logging in…' : 'Log in as driver'}</Text>
+          <Text style={styles.buttonText}>{loading ? 'Logging in…' : 'Log in'}</Text>
         </TouchableOpacity>
+
+        <Text style={styles.hint}>Need access? Contact the transport office.</Text>
+
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -145,4 +174,5 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: { opacity: 0.6 },
   buttonText: { ...typography.button, color: colors.textOnPrimary },
+  hint: { ...typography.caption, color: colors.textSecondary, textAlign: 'center', marginTop: spacing.xl },
 });
