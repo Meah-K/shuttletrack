@@ -1,4 +1,4 @@
-package com.shuttletrack.notification_service;
+package com.shuttletrack.notificationservice;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
