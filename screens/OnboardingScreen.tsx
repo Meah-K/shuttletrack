@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Ionicons } from '@expo/vector-icons';
 import {
   View,
   Text,
@@ -7,8 +6,29 @@ import {
   TouchableOpacity,
   SafeAreaView,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import type { StackNavigationProp } from '@react-navigation/stack';
 
-const slides = [
+type RootStackParamList = {
+  Onboarding: undefined;
+  Login: undefined;
+};
+
+type OnboardingNavigationProp = StackNavigationProp<RootStackParamList, 'Onboarding'>;
+
+interface OnboardingScreenProps {
+  navigation: OnboardingNavigationProp;
+}
+
+interface Slide {
+  id: number;
+  icon: string;
+  iconColor: string;
+  title: string;
+  description: string;
+}
+
+const slides: Slide[] = [
   {
     id: 1,
     icon: 'bus',
@@ -25,19 +45,20 @@ const slides = [
     description:
       'ShuttleTrack tells you whether to wait for the next shuttle or start walking to save time.',
   },
-
 ];
 
-export default function OnboardingScreen({ navigation }) {
-  const [currentIndex, setCurrentIndex] = useState(0);
+export default function OnboardingScreen({ navigation }: OnboardingScreenProps): React.JSX.Element {
+  const [currentIndex, setCurrentIndex] = useState<number>(0);
 
-  const goToLogin = () => navigation.replace('Login');
+  function goToLogin(): void {
+    navigation.replace('Login');
+  }
 
-  const goNext = () => {
+  function goNext(): void {
     if (currentIndex < slides.length - 1) {
       setCurrentIndex(currentIndex + 1);
     }
-  };
+  }
 
   const slide = slides[currentIndex];
   const isLastSlide = currentIndex === slides.length - 1;
@@ -45,20 +66,17 @@ export default function OnboardingScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.container}>
 
-      {/* Skip button */}
       <TouchableOpacity style={styles.skipBtn} onPress={goToLogin}>
         <Text style={styles.skipText}>Skip</Text>
       </TouchableOpacity>
 
-      {/* Illustration */}
       <View style={styles.illustrationBox}>
-<Ionicons name={slide.icon} size={80} color={slide.iconColor} />      </View>
+        <Ionicons name={slide.icon as any} size={80} color={slide.iconColor} />
+      </View>
 
-      {/* Text */}
       <Text style={styles.title}>{slide.title}</Text>
       <Text style={styles.description}>{slide.description}</Text>
 
-      {/* Dots */}
       <View style={styles.dotsRow}>
         {slides.map((_, i) => (
           <View
@@ -71,7 +89,6 @@ export default function OnboardingScreen({ navigation }) {
         ))}
       </View>
 
-      {/* Main button */}
       <TouchableOpacity
         style={styles.mainBtn}
         onPress={isLastSlide ? goToLogin : goNext}
@@ -81,7 +98,6 @@ export default function OnboardingScreen({ navigation }) {
         </Text>
       </TouchableOpacity>
 
-      {/* Login link on last slide */}
       {isLastSlide && (
         <TouchableOpacity onPress={goToLogin} style={styles.loginRow}>
           <Text style={styles.loginText}>
@@ -122,9 +138,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 36,
   },
-  emoji: {
-    fontSize: 80,
-  },
   title: {
     fontSize: 24,
     fontWeight: '700',
@@ -161,7 +174,7 @@ const styles = StyleSheet.create({
   mainBtn: {
     backgroundColor: '#1C6B2A',
     paddingVertical: 16,
-    paddingHorizontal: 56,
+    paddingHorizontal: 24,
     borderRadius: 50,
     width: '100%',
     alignItems: 'center',
