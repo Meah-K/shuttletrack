@@ -12,7 +12,7 @@ import java.time.Duration;
 import java.util.*;
 
 @RestController
-@RequestMapping("/api/notifications")
+@RequestMapping("/notifications")
 @CrossOrigin(origins = "*")
 public class NotificationController {
 
