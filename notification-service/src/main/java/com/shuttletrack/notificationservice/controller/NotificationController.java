@@ -20,7 +20,7 @@ public class NotificationController {
     private NotificationRepository repo;
 
     // ──────────────────────────────────────────────────────────────────
-    // GET /api/notifications
+    // GET /notifications
     // Returns all notifications for the logged-in student.
     // The userId is passed as a header by the API Gateway after JWT check.
     // Response matches the agreed API contract exactly.
