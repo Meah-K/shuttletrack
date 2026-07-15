@@ -66,10 +66,10 @@ public class GatewayController {
 
         try {
             return restTemplate.exchange(targetUrl, method, entity, String.class);
-        } catch (HttpStatusCodeException e) {
-            // The downstream service responded with an error (like 401, 404, 409) —
-            // pass its exact status and body straight back through, don't swallow it.
-            return ResponseEntity.status(e.getStatusCode()).body(e.getResponseBodyAsString());
-        }
+        } catch (Exception e) {
+    e.printStackTrace();
+    return ResponseEntity.status(502)
+            .body("Gateway error: " + e.getMessage());
+}
     }
 }
