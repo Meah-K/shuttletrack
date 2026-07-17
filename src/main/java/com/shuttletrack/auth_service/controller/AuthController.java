@@ -18,12 +18,20 @@ public class AuthController {
 
     private final AuthService authService;
 
-    @PostMapping("/register")
-    public ResponseEntity<MessageResponse> register(@Valid @RequestBody RegisterRequest request) {
+   @PostMapping("/register")
+public ResponseEntity<MessageResponse> register(@Valid @RequestBody RegisterRequest request) {
+    System.out.println("=== REGISTER ENDPOINT HIT === email: " + request.getEmail());
+    try {
         authService.register(request);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(new MessageResponse("Account created successfully"));
+        System.out.println("=== REGISTER SUCCEEDED ===");
+    } catch (Exception e) {
+        System.out.println("=== REGISTER FAILED WITH: " + e.getClass().getName() + " - " + e.getMessage() + " ===");
+        e.printStackTrace();
+        throw e;
     }
+    return ResponseEntity.status(HttpStatus.CREATED)
+            .body(new MessageResponse("Account created successfully"));
+}
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
