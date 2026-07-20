@@ -149,10 +149,13 @@ public class NotificationController {
             ));
         }
 
-        // Ensure base URL ends cleanly without double slashes
-        String baseUrl = authServiceBaseUrl.endsWith("/") ?
-                authServiceBaseUrl.substring(0, authServiceBaseUrl.length() - 1) : authServiceBaseUrl;
+        // Cleanly strip trailing slashes if present
+        String baseUrl = authServiceBaseUrl.trim();
+        if (baseUrl.endsWith("/")) {
+            baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
+        }
 
+// Build the clean single path
         String authServiceUrl = baseUrl + "/api/users/route/" + body.getRouteId();
 
         List<String> studentIdStrings = new ArrayList<>();
