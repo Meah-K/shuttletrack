@@ -1,16 +1,17 @@
 package com.shuttletrack.notificationservice.controller;
 
 import com.shuttletrack.notificationservice.dto.BroadcastRequest;
-import org.springframework.web.client.RestTemplate;
 import com.shuttletrack.notificationservice.model.Notification;
 import com.shuttletrack.notificationservice.repository.NotificationRepository;
 import com.shuttletrack.notificationservice.security.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 
-import java.time.LocalDateTime;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.*;
 
 @RestController
@@ -24,7 +25,12 @@ public class NotificationController {
     @Autowired
     private JwtUtil jwtUtil;
 
+    @Autowired
+    private RestTemplate restTemplate;
 
+    // Optional: Inject base URL from application.properties, fallback to Railway default
+    @Value("${auth.service.url:https://shuttletrack-production.up.railway.app}")
+    private String authServiceBaseUrl;
 
     // ──────────────────────────────────────────────────────────────────
     // GET /notifications
@@ -42,7 +48,6 @@ public class NotificationController {
         }
 
         String token = authHeader.substring(7);
-
         String userIdStr;
 
         try {
@@ -55,9 +60,7 @@ public class NotificationController {
         }
 
         UUID userId = UUID.fromString(userIdStr);
-
-        List<Notification> notifications =
-                repo.findByUserIdOrderBySentAtDesc(userId);
+        List<Notification> notifications = repo.findByUserIdOrderBySentAtDesc(userId);
 
         List<Map<String, Object>> response = new ArrayList<>();
 
@@ -93,7 +96,6 @@ public class NotificationController {
         }
 
         String token = authHeader.substring(7);
-
         String userIdStr;
 
         try {
@@ -134,38 +136,50 @@ public class NotificationController {
 
     // ──────────────────────────────────────────────────────────────────
     // POST /notifications/broadcast
-    // Creates a notification    // ──────────────────────────────────────────────────────────────────
-    @Autowired
-    private RestTemplate restTemplate;
-
+    // Fetches target student IDs from auth-service and saves notifications
     // ──────────────────────────────────────────────────────────────────
-// POST /notifications/broadcast
-// Fetches target student IDs from auth-service and saves notifications
-// ──────────────────────────────────────────────────────────────────
     @PostMapping("/broadcast")
     public ResponseEntity<?> broadcast(@RequestBody BroadcastRequest body) {
 
-        if (body.getRouteId() == null || body.getTitle() == null || body.getMessage() == null) {
+        if (body.getRouteId() == null || body.getRouteId().trim().isEmpty() ||
+                body.getTitle() == null || body.getMessage() == null) {
             return ResponseEntity.status(400).body(Map.of(
                     "error", "Validation failed",
                     "details", "routeId, title, and message are required"
             ));
         }
 
-        // 1. URL pointing to your auth-service endpoint that returns student UUIDs for a given route
-        // Replace with your actual auth-service URL / Railway domain
-        String authServiceUrl = "shuttletrack-production-6b61.up.railway.app" + body.getRouteId();
+        // Ensure base URL ends cleanly without double slashes
+        String baseUrl = authServiceBaseUrl.endsWith("/") ?
+                authServiceBaseUrl.substring(0, authServiceBaseUrl.length() - 1) : authServiceBaseUrl;
 
-        List<String> studentIdStrings;
+        String authServiceUrl = baseUrl + "/api/users/route/" + body.getRouteId();
+
+        List<String> studentIdStrings = new ArrayList<>();
 
         try {
-            // 2. Call auth-service to get the list of student IDs
-            String[] studentIdsArray = restTemplate.getForObject(authServiceUrl, String[].class);
-            studentIdStrings = studentIdsArray != null ? Arrays.asList(studentIdsArray) : Collections.emptyList();
+            // Retrieve response as Object array to safely extract UUID strings
+            Object[] rawResponse = restTemplate.getForObject(authServiceUrl, Object[].class);
+
+            if (rawResponse != null) {
+                for (Object item : rawResponse) {
+                    if (item instanceof String) {
+                        studentIdStrings.add((String) item);
+                    } else if (item instanceof Map) {
+                        Map<?, ?> map = (Map<?, ?>) item;
+                        // Checks common user ID JSON keys
+                        if (map.containsKey("userId")) {
+                            studentIdStrings.add(String.valueOf(map.get("userId")));
+                        } else if (map.containsKey("id")) {
+                            studentIdStrings.add(String.valueOf(map.get("id")));
+                        }
+                    }
+                }
+            }
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of(
                     "error", "Service communication failed",
-                    "message", "Unable to retrieve students from auth-service: " + e.getMessage()
+                    "message", "Unable to retrieve students from auth-service at (" + authServiceUrl + "): " + e.getMessage()
             ));
         }
 
@@ -175,23 +189,29 @@ public class NotificationController {
             ));
         }
 
-        // 3. Loop through each student ID and create a notification row
+        // Save notification for each retrieved student
         List<Notification> notificationsToSave = new ArrayList<>();
 
         for (String idStr : studentIdStrings) {
-            Notification notif = new Notification();
-            notif.setUserId(UUID.fromString(idStr));
-            notif.setTitle(body.getTitle());
-            notif.setMessage(body.getMessage());
-            notif.setType(body.getType() != null ? body.getType() : "GENERAL");
-            notif.setAffectedRouteId(body.getRouteId());
-            notif.setSentAt(LocalDateTime.now());
+            try {
+                Notification notif = new Notification();
+                notif.setUserId(UUID.fromString(idStr));
+                notif.setTitle(body.getTitle());
+                notif.setMessage(body.getMessage());
+                notif.setType(body.getType() != null ? body.getType() : "GENERAL");
+                notif.setAffectedRouteId(body.getRouteId());
+                notif.setSentAt(LocalDateTime.now());
 
-            notificationsToSave.add(notif);
+                notificationsToSave.add(notif);
+            } catch (IllegalArgumentException e) {
+                // Skips any malformed non-UUID strings safely
+                System.err.println("Invalid UUID string skipped: " + idStr);
+            }
         }
 
-        // 4. Batch save all notifications
-        repo.saveAll(notificationsToSave);
+        if (!notificationsToSave.isEmpty()) {
+            repo.saveAll(notificationsToSave);
+        }
 
         return ResponseEntity.ok(Map.of(
                 "message", "Broadcast sent to " + notificationsToSave.size() + " student(s) on route " + body.getRouteId()
@@ -203,8 +223,7 @@ public class NotificationController {
     // ──────────────────────────────────────────────────────────────────
     private String getTimeAgo(LocalDateTime sentAt) {
 
-        long minutes =
-                Duration.between(sentAt, LocalDateTime.now()).toMinutes();
+        long minutes = Duration.between(sentAt, LocalDateTime.now()).toMinutes();
 
         if (minutes < 1)
             return "Just now";
