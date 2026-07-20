@@ -29,7 +29,7 @@ public class NotificationController {
     private RestTemplate restTemplate;
 
     // Optional: Inject base URL from application.properties, fallback to Railway default
-    @Value("${auth.service.url:https://shuttletrack-production.up.railway.app}")
+    @Value("${auth.service.url:https://shuttletrack-production-6b61.up.railway.app}")
     private String authServiceBaseUrl;
 
     // ──────────────────────────────────────────────────────────────────
