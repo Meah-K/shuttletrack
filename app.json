@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "shuttletrack",
+    "slug": "shuttletrack",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyBo3Z30s46g6Y9VRUT7Wnfb77vYPBku6fg"
+        }
+      }
+    },
+    "ios": {
+      "supportsTablet": true,
+      "config": {
+        "googleMapsApiKey": "AIzaSyBo3Z30s46g6Y9VRUT7Wnfb77vYPBku6fg"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}
