@@ -18,7 +18,7 @@ import { getToken } from './tokenStorage';
 // Local dev: 'http://localhost:8080' (works on simulator)
 // Phone testing: replace 'localhost' with your laptop's WiFi IP, e.g. 'http://192.168.1.5:8080'
 // Production: 'https://shuttletrack.up.railway.app' (or whatever Railway gives us)
-const BASE_URL = 'http://localhost:8080';
+const BASE_URL = 'https://airy-trust-production-8d38.up.railway.app';
 // --------------------------------------------------------------
 
 export const api = axios.create({
