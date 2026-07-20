@@ -1,6 +1,7 @@
 package com.shuttletrack.notificationservice.controller;
 
 import com.shuttletrack.notificationservice.dto.BroadcastRequest;
+import org.springframework.web.client.RestTemplate;
 import com.shuttletrack.notificationservice.model.Notification;
 import com.shuttletrack.notificationservice.repository.NotificationRepository;
 import com.shuttletrack.notificationservice.security.JwtUtil;
@@ -22,6 +23,8 @@ public class NotificationController {
 
     @Autowired
     private JwtUtil jwtUtil;
+
+
 
     // ──────────────────────────────────────────────────────────────────
     // GET /notifications
@@ -131,38 +134,67 @@ public class NotificationController {
 
     // ──────────────────────────────────────────────────────────────────
     // POST /notifications/broadcast
-    // Creates a notification
+    // Creates a notification    // ──────────────────────────────────────────────────────────────────
+    @Autowired
+    private RestTemplate restTemplate;
+
     // ──────────────────────────────────────────────────────────────────
+// POST /notifications/broadcast
+// Fetches target student IDs from auth-service and saves notifications
+// ──────────────────────────────────────────────────────────────────
     @PostMapping("/broadcast")
     public ResponseEntity<?> broadcast(@RequestBody BroadcastRequest body) {
 
-        if (body.getRouteId() == null ||
-                body.getTitle() == null ||
-                body.getMessage() == null) {
-
+        if (body.getRouteId() == null || body.getTitle() == null || body.getMessage() == null) {
             return ResponseEntity.status(400).body(Map.of(
                     "error", "Validation failed",
                     "details", "routeId, title, and message are required"
             ));
         }
 
-        Notification notif = new Notification();
+        // 1. URL pointing to your auth-service endpoint that returns student UUIDs for a given route
+        // Replace with your actual auth-service URL / Railway domain
+        String authServiceUrl = "shuttletrack-production-6b61.up.railway.app" + body.getRouteId();
 
-        notif.setUserId(
-                UUID.fromString("00000000-0000-0000-0000-000000000001"));
+        List<String> studentIdStrings;
 
-        notif.setTitle(body.getTitle());
-        notif.setMessage(body.getMessage());
-        notif.setType(
-                body.getType() != null ? body.getType() : "GENERAL");
-        notif.setAffectedRouteId(body.getRouteId());
-        notif.setSentAt(LocalDateTime.now());
+        try {
+            // 2. Call auth-service to get the list of student IDs
+            String[] studentIdsArray = restTemplate.getForObject(authServiceUrl, String[].class);
+            studentIdStrings = studentIdsArray != null ? Arrays.asList(studentIdsArray) : Collections.emptyList();
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                    "error", "Service communication failed",
+                    "message", "Unable to retrieve students from auth-service: " + e.getMessage()
+            ));
+        }
 
-        repo.save(notif);
+        if (studentIdStrings.isEmpty()) {
+            return ResponseEntity.ok(Map.of(
+                    "message", "Broadcast processed, but no students were found on route " + body.getRouteId()
+            ));
+        }
+
+        // 3. Loop through each student ID and create a notification row
+        List<Notification> notificationsToSave = new ArrayList<>();
+
+        for (String idStr : studentIdStrings) {
+            Notification notif = new Notification();
+            notif.setUserId(UUID.fromString(idStr));
+            notif.setTitle(body.getTitle());
+            notif.setMessage(body.getMessage());
+            notif.setType(body.getType() != null ? body.getType() : "GENERAL");
+            notif.setAffectedRouteId(body.getRouteId());
+            notif.setSentAt(LocalDateTime.now());
+
+            notificationsToSave.add(notif);
+        }
+
+        // 4. Batch save all notifications
+        repo.saveAll(notificationsToSave);
 
         return ResponseEntity.ok(Map.of(
-                "message",
-                "Broadcast sent to students on route " + body.getRouteId()
+                "message", "Broadcast sent to " + notificationsToSave.size() + " student(s) on route " + body.getRouteId()
         ));
     }
 
