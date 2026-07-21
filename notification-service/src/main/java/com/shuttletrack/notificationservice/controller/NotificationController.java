@@ -28,7 +28,7 @@ public class NotificationController {
     @Autowired
     private RestTemplate restTemplate;
 
-    // Optional: Inject base URL from application.properties, fallback to Railway default
+    // Reads AUTH_SERVICE_URL from Railway env vars, falls back to this default if unset
     @Value("${auth.service.url:https://shuttletrack-production-6b61.up.railway.app}")
     private String authServiceBaseUrl;
 
@@ -136,7 +136,8 @@ public class NotificationController {
 
     // ──────────────────────────────────────────────────────────────────
     // POST /notifications/broadcast
-    // Fetches target student IDs from auth-service and saves notifications
+    // Fetches ALL student IDs from auth-service and saves a notification
+    // for each one. routeId is kept only for display, not filtering.
     // ──────────────────────────────────────────────────────────────────
     @PostMapping("/broadcast")
     public ResponseEntity<?> broadcast(@RequestBody BroadcastRequest body) {
@@ -149,19 +150,16 @@ public class NotificationController {
             ));
         }
 
-        // Cleanly strip trailing slashes if present
         String baseUrl = authServiceBaseUrl.trim();
         if (baseUrl.endsWith("/")) {
             baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
         }
 
-// Build the clean single path
-        String authServiceUrl = baseUrl + "/api/users/route/" + body.getRouteId();
+        String authServiceUrl = baseUrl + "/users";
 
         List<String> studentIdStrings = new ArrayList<>();
 
         try {
-            // Retrieve response as Object array to safely extract UUID strings
             Object[] rawResponse = restTemplate.getForObject(authServiceUrl, Object[].class);
 
             if (rawResponse != null) {
@@ -170,7 +168,6 @@ public class NotificationController {
                         studentIdStrings.add((String) item);
                     } else if (item instanceof Map) {
                         Map<?, ?> map = (Map<?, ?>) item;
-                        // Checks common user ID JSON keys
                         if (map.containsKey("userId")) {
                             studentIdStrings.add(String.valueOf(map.get("userId")));
                         } else if (map.containsKey("id")) {
@@ -188,11 +185,10 @@ public class NotificationController {
 
         if (studentIdStrings.isEmpty()) {
             return ResponseEntity.ok(Map.of(
-                    "message", "Broadcast processed, but no students were found on route " + body.getRouteId()
+                    "message", "Broadcast processed, but no students were found"
             ));
         }
 
-        // Save notification for each retrieved student
         List<Notification> notificationsToSave = new ArrayList<>();
 
         for (String idStr : studentIdStrings) {
@@ -207,7 +203,6 @@ public class NotificationController {
 
                 notificationsToSave.add(notif);
             } catch (IllegalArgumentException e) {
-                // Skips any malformed non-UUID strings safely
                 System.err.println("Invalid UUID string skipped: " + idStr);
             }
         }
@@ -217,7 +212,8 @@ public class NotificationController {
         }
 
         return ResponseEntity.ok(Map.of(
-                "message", "Broadcast sent to " + notificationsToSave.size() + " student(s) on route " + body.getRouteId()
+                "message", "Broadcast sent to " + notificationsToSave.size() + " student(s)",
+                "routeId", body.getRouteId()
         ));
     }
 

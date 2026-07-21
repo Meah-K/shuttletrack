@@ -11,8 +11,8 @@ public class NotificationServiceApplication {
 		SpringApplication.run(NotificationServiceApplication.class, args);
 	}
 	// Add this Bean definition:
-	@Bean
-	public RestTemplate restTemplate() {
-		return new RestTemplate();
-	}
+	//@Bean
+	//public RestTemplate restTemplate() {
+		//return new RestTemplate();
+	//}
 }
