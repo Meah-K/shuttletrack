@@ -35,17 +35,17 @@ export const currentDriver = {
 export const routes = [
   {
     routeId: "route-A",
-    name: "Route A — Main Gate",
+    name: "Route A — KSB",
     shortName: "Route A",
     color: "#1C6B2A",
     totalStops: 5,
     loopTimeMinutes: 12,
     stops: [
-      { stopId: "stop-A1", name: "Main Gate",       latitude: 6.6745, longitude: -1.5716, order: 1 },
+      { stopId: "stop-A1", name: "KSB",       latitude: 6.6745, longitude: -1.5716, order: 1 },
       { stopId: "stop-A2", name: "Unity Hall",       latitude: 6.6738, longitude: -1.5724, order: 2 },
       { stopId: "stop-A3", name: "SRC Bus Stop",     latitude: 6.6729, longitude: -1.5731, order: 3 },
       { stopId: "stop-A4", name: "Paa Joe Junction", latitude: 6.6720, longitude: -1.5719, order: 4 },
-      { stopId: "stop-A5", name: "Main Gate",        latitude: 6.6745, longitude: -1.5716, order: 5 },
+      { stopId: "stop-A5", name: "KSB",        latitude: 6.6745, longitude: -1.5716, order: 5 },
     ],
   },
   {
@@ -87,7 +87,7 @@ export const shuttles = [
   {
     shuttleId: "shuttle-001",
     routeId: "route-A",
-    routeName: "Route A — Main Gate",
+    routeName: "Route A — KSB",
     driverId: "driver-001",
     status: "HAS_SPACE",
     latitude: 6.6741,
@@ -127,9 +127,9 @@ export const notifications = [
     notificationId: "notif-001",
     title: "Route A delayed by 5 min",
     message:
-      "The shuttle on the Main Gate route is currently running approximately 5 minutes behind schedule due to heavy traffic near the Engineering faculty. We apologise for the inconvenience.",
+      "The shuttle on the KSB route is currently running approximately 5 minutes behind schedule due to heavy traffic near the Engineering faculty. We apologise for the inconvenience.",
     affectedRouteId: "route-A",
-    affectedRouteName: "Route A — Main Gate",
+    affectedRouteName: "Route A — KSB",
     type: "DELAY",
     isRead: false,
     sentAt: "2026-05-09T08:30:00",

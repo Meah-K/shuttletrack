@@ -41,7 +41,7 @@ if (Platform.OS !== 'web') {
 
 const ADS: Ad[] = [
   { id: 1, title: 'Chicken Republic — Paa Joe', subtitle: '10% off with code SHUTTLE10 🍗', color: '#E63946' },
-  { id: 2, title: 'Papaye Restaurant — Main Gate', subtitle: 'Free drink with any meal today 🥤', color: '#1C6B2A' },
+  { id: 2, title: 'Papaye Restaurant — KSB', subtitle: 'Free drink with any meal today 🥤', color: '#1C6B2A' },
   { id: 3, title: 'KNUST Print Shop — SRC', subtitle: 'Print 50 pages for GHS 5 only 🖨️', color: '#2E5F8A' },
 ];
 

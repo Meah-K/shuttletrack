@@ -83,7 +83,7 @@ export default function ShuttleDetailScreen({ navigation, route }: ShuttleDetail
               <View style={styles.stopLine} />
             </View>
             <View style={styles.stopContent}>
-              <Text style={styles.stopName}>Main Gate</Text>
+              <Text style={styles.stopName}>KSB</Text>
               <Text style={styles.stopType}>Next stop</Text>
             </View>
             <Text style={styles.stopEtaActive}>

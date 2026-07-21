@@ -42,7 +42,7 @@ export default function WalkOrWaitScreen({ navigation, route }: WalkOrWaitScreen
   useEffect(() => {
     const stop: Stop = shuttleRoute?.stops[0] ?? {
       stopId: 'default',
-      name: 'Main Gate',
+      name: 'KSB',
       latitude: 6.6745,
       longitude: -1.5716,
       order: 1,
@@ -156,7 +156,7 @@ export default function WalkOrWaitScreen({ navigation, route }: WalkOrWaitScreen
               onPress={() => {
                 const stop: Stop = shuttleRoute?.stops[0] ?? {
                   stopId: 'default',
-                  name: 'Main Gate',
+                  name: 'KSB',
                   latitude: 6.6745,
                   longitude: -1.5716,
                   order: 1,

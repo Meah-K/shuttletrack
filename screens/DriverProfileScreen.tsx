@@ -48,7 +48,7 @@ export default function DriverProfileScreen({ navigation }: DriverProfileScreenP
         <View style={styles.card}>
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Assigned route</Text>
-            <Text style={styles.infoValue}>Route A — Main Gate</Text>
+            <Text style={styles.infoValue}>Route A — KSB</Text>
           </View>
           <View style={styles.divider} />
           <View style={styles.infoRow}>

@@ -17,7 +17,7 @@ export default function RoutesScreen() {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.routeName}>Route A - Main Gate</Text>
+          <Text style={styles.routeName}>Route A - KSB</Text>
           <Text style={styles.routeDetails}>5 stops, ~12 min loop</Text>
           <View style={styles.statusBadge}>
             <Text style={styles.statusText}>✅ Has Space</Text>
