@@ -115,18 +115,26 @@ export default function HomeMapScreen({ navigation }: HomeMapScreenProps): React
   const sheetHeight = useRef(new Animated.Value(1)).current;
 
   // Merged list used for rendering — real shuttle(s) first, then mock filler.
-  const shuttleData = [...realShuttleData, ...mockShuttleData];
+const shuttleData = realShuttleData.filter(
+  shuttle => shuttle.routeId === 'route-A' 
+);
 
   // Fetch the real shuttle(s) on mount, then poll periodically to keep ETA/status fresh.
   React.useEffect(() => {
     let isMounted = true;
-
-   async function loadRealShuttles() {
+async function loadRealShuttles() {
   try {
     const real = await getShuttlesWithEta();
-    if (isMounted) setRealShuttleData(real);
+
+    const cleaned = real.map(shuttle => ({
+      ...shuttle,
+      routeName: shuttle.routeName ?? shuttle.routeId,
+    }));
+
+    setRealShuttleData(cleaned);
+
   } catch (err) {
-    console.log('Could not fetch real shuttle data, showing mock only:', err);
+    console.log(err);
   }
 }
 

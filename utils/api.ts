@@ -37,9 +37,9 @@ function delay(ms: number): Promise<void> {
 
 // Backend doesn't send routeName yet — map routeId to a display name here.
 const ROUTE_NAMES: Record<string, string> = {
-  'route-A': 'Route A — Main Gate',
-  'route-B': 'Route B — Paa Joe',
-  'route-C': 'Route C — SRC',
+  'route-A': 'Route A — KSB',
+  'route-B': 'Route B — KSB to Brunei',
+  'route-C': 'Route C — Pharmacy to Gaza',
 };
 
 // ─── TOKEN HELPERS ────────────────────────────────────────────
@@ -60,8 +60,8 @@ export interface StoredUser {
   userId: string;
   name: string;
   role: 'STUDENT' | 'DRIVER';
+  email: string;
 }
-
 export async function saveUser(user: StoredUser): Promise<void> {
   await AsyncStorage.setItem('userData', JSON.stringify(user));
 }
@@ -100,11 +100,7 @@ export async function loginStudent(data: LoginRequest): Promise<LoginResponse> {
     await delay(MOCK_DELAY);
     const mockToken = 'mock-jwt-token-student-001';
     await saveToken(mockToken);
-    await saveUser({
-      userId: currentStudent.userId,
-      name: currentStudent.name,
-      role: 'STUDENT',
-    });
+    await saveUser({ userId: currentStudent.userId, name: currentStudent.name, role: 'STUDENT', email: data.email });
     return {
       token: mockToken,
       userId: currentStudent.userId,
@@ -150,8 +146,7 @@ export async function loginDriver(data: LoginRequest): Promise<LoginResponse> {
     await delay(MOCK_DELAY);
     const mockToken = 'mock-jwt-token-driver-001';
     await saveToken(mockToken);
-    await saveUser({ userId: 'driver-001', name: 'Kwame Mensah', role: 'DRIVER' });
-    return {
+    await saveUser({ userId: result.userId, name: result.name, role: result.role, email: data.email });    return {
       token: mockToken,
       userId: 'driver-001',
       name: 'Kwame Mensah',
@@ -322,7 +317,6 @@ export async function markNotificationRead(notificationId: string): Promise<void
   }
 
   const token = await getToken();
-  console.log("TOKEN BEING SENT:", token);
   const response = await fetch(`${NOTIFICATION_URL}/notifications/${notificationId}/read`, {
     method: 'PUT',
     headers: {
@@ -342,16 +336,30 @@ export async function getShuttlesWithEta(): Promise<Shuttle[]> {
 
   const shuttlesWithEta = await Promise.all(
     shuttlesData.map(async (shuttle) => {
-      if (shuttle.status !== 'HAS_SPACE') {
-        return shuttle;
+      const route = routesData.find(
+        r => r.routeId === shuttle.routeId
+      );
+
+      let etaMinutes = null;
+
+      if (shuttle.status === 'HAS_SPACE') {
+        const firstStop = route?.stops[0];
+
+        if (firstStop) {
+          const eta = await getEta(
+            firstStop.stopId,
+            shuttle.routeId
+          );
+
+          etaMinutes = eta?.etaMinutes ?? null;
+        }
       }
-      const route = routesData.find(r => r.routeId === shuttle.routeId);
-      const firstStop = route?.stops[0];
-      if (!firstStop) {
-        return shuttle;
-      }
-      const eta = await getEta(firstStop.stopId, shuttle.routeId);
-      return { ...shuttle, etaMinutes: eta?.etaMinutes ?? null };
+
+      return {
+        ...shuttle,
+        routeName: route?.name ?? shuttle.routeId,
+        etaMinutes,
+      };
     })
   );
 

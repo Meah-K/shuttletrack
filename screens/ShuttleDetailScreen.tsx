@@ -83,7 +83,7 @@ export default function ShuttleDetailScreen({ navigation, route }: ShuttleDetail
               <View style={styles.stopLine} />
             </View>
             <View style={styles.stopContent}>
-              <Text style={styles.stopName}>Main Gate</Text>
+              <Text style={styles.stopName}>KSB</Text>
               <Text style={styles.stopType}>Next stop</Text>
             </View>
             <Text style={styles.stopEtaActive}>
@@ -96,26 +96,38 @@ export default function ShuttleDetailScreen({ navigation, route }: ShuttleDetail
               <View style={styles.stopLine} />
             </View>
             <View style={styles.stopContent}>
-              <Text style={styles.stopNameMuted}>Unity Hall</Text>
+              <Text style={styles.stopNameMuted}>Casely</Text>
             </View>
             <Text style={styles.stopEta}>
               {shuttle.etaMinutes ? `${shuttle.etaMinutes + 5} min` : 'N/A'}
             </Text>
           </View>
-          <View style={styles.stopRow}>
-            <View style={styles.stopIndicator}>
-              <View style={styles.stopDot} />
-            </View>
-            <View style={styles.stopContent}>
-              <Text style={styles.stopNameMuted}>SRC Bus Stop</Text>
-            </View>
-            <Text style={styles.stopEta}>
-              {shuttle.etaMinutes ? `${shuttle.etaMinutes + 10} min` : 'N/A'}
-            </Text>
-          </View>
+         <View style={styles.stopRow}>
+        <View style={styles.stopIndicator}>
+          <View style={styles.stopDot} />
+          <View style={styles.stopLine} />
         </View>
+        <View style={styles.stopContent}>
+          <Text style={styles.stopNameMuted}>Unity</Text>
+        </View>
+        <Text style={styles.stopEta}>
+          {shuttle.etaMinutes ? `${shuttle.etaMinutes + 10} min` : 'N/A'}
+        </Text>
+      </View>
+      <View style={styles.stopRow}>
+        <View style={styles.stopIndicator}>
+          <View style={styles.stopDot} />
+        </View>
+        <View style={styles.stopContent}>
+          <Text style={styles.stopNameMuted}>Commercial</Text>
+        </View>
+        <Text style={styles.stopEta}>
+          {shuttle.etaMinutes ? `${shuttle.etaMinutes + 15} min` : 'N/A'}
+        </Text>
+      </View>
+    </View>
 
-        <View style={styles.infoRow}>
+    <View style={styles.infoRow}>
           <View style={styles.infoCard}>
             <Ionicons name="location" size={20} color="#1C6B2A" />
             <Text style={styles.infoValue}>On route</Text>
@@ -128,7 +140,7 @@ export default function ShuttleDetailScreen({ navigation, route }: ShuttleDetail
           </View>
           <View style={styles.infoCard}>
             <Ionicons name="bus" size={20} color="#1C6B2A" />
-            <Text style={styles.infoValue}>3 stops</Text>
+            <Text style={styles.infoValue}>4 stops</Text>
             <Text style={styles.infoLabel}>Remaining</Text>
           </View>
         </View>
