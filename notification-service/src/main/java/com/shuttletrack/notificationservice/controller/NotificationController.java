@@ -6,6 +6,9 @@ import com.shuttletrack.notificationservice.repository.NotificationRepository;
 import com.shuttletrack.notificationservice.security.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
@@ -31,6 +34,10 @@ public class NotificationController {
     // Reads AUTH_SERVICE_URL from Railway env vars, falls back to this default if unset
     @Value("${auth.service.url:https://shuttletrack-production-6b61.up.railway.app}")
     private String authServiceBaseUrl;
+
+    // Reads INTERNAL_API_KEY from Railway env vars — required by auth-service's /users endpoint
+    @Value("${internal.api.key}")
+    private String internalApiKey;
 
     // ──────────────────────────────────────────────────────────────────
     // GET /notifications
@@ -136,8 +143,9 @@ public class NotificationController {
 
     // ──────────────────────────────────────────────────────────────────
     // POST /notifications/broadcast
-    // Fetches ALL student IDs from auth-service and saves a notification
-    // for each one. routeId is kept only for display, not filtering.
+    // Fetches ALL student IDs from auth-service (using internal API key)
+    // and saves a notification for each one. routeId is kept only for
+    // display, not filtering.
     // ──────────────────────────────────────────────────────────────────
     @PostMapping("/broadcast")
     public ResponseEntity<?> broadcast(@RequestBody BroadcastRequest body) {
@@ -160,7 +168,18 @@ public class NotificationController {
         List<String> studentIdStrings = new ArrayList<>();
 
         try {
-            Object[] rawResponse = restTemplate.getForObject(authServiceUrl, Object[].class);
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("X-Internal-Api-Key", internalApiKey);
+            HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
+
+            ResponseEntity<Object[]> response = restTemplate.exchange(
+                    authServiceUrl,
+                    HttpMethod.GET,
+                    requestEntity,
+                    Object[].class
+            );
+
+            Object[] rawResponse = response.getBody();
 
             if (rawResponse != null) {
                 for (Object item : rawResponse) {
