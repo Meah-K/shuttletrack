@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.HttpStatusCodeException;
 
 @RestController
 public class GatewayController {
@@ -45,31 +46,35 @@ public class GatewayController {
         return forward(request, body, notificationServiceUrl);
     }
 
-    private ResponseEntity<String> forward(HttpServletRequest request, String body, String targetBaseUrl) {
-        String targetUrl = targetBaseUrl + request.getRequestURI();
-        if (request.getQueryString() != null) {
-            targetUrl += "?" + request.getQueryString();
-        }
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Content-Type", "application/json");
-
-        // Pass the caller's identity downstream, so Tracking/Notification
-        // services can trust these headers instead of re-parsing the JWT.
-        Object userId = request.getAttribute("userId");
-        Object role = request.getAttribute("role");
-        if (userId != null) headers.set("X-User-Id", userId.toString());
-        if (role != null) headers.set("X-User-Role", role.toString());
-
-        HttpEntity<String> entity = new HttpEntity<>(body, headers);
-        HttpMethod method = HttpMethod.valueOf(request.getMethod());
-
-        try {
-            return restTemplate.exchange(targetUrl, method, entity, String.class);
-        } catch (Exception e) {
-    e.printStackTrace();
-    return ResponseEntity.status(502)
-            .body("Gateway error: " + e.getMessage());
-}
+   private ResponseEntity<String> forward(HttpServletRequest request, String body, String targetBaseUrl) {
+    String targetUrl = targetBaseUrl + request.getRequestURI();
+    if (request.getQueryString() != null) {
+        targetUrl += "?" + request.getQueryString();
     }
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.set("Content-Type", "application/json");
+
+    Object userId = request.getAttribute("userId");
+    Object role = request.getAttribute("role");
+    if (userId != null) headers.set("X-User-Id", userId.toString());
+    if (role != null) headers.set("X-User-Role", role.toString());
+
+    HttpEntity<String> entity = new HttpEntity<>(body, headers);
+    HttpMethod method = HttpMethod.valueOf(request.getMethod());
+
+    try {
+        return restTemplate.exchange(targetUrl, method, entity, String.class);
+    } catch (HttpStatusCodeException e) {
+        // Downstream service responded with a real status (400, 404, 409, etc.) —
+        // pass that exact status and body straight through instead of masking it as 502.
+        return ResponseEntity.status(e.getStatusCode()).body(e.getResponseBodyAsString());
+    } catch (Exception e) {
+        // A genuine gateway-level failure — connection refused, timeout, DNS, etc.
+        System.out.println("Forwarding to: " + targetUrl);
+        System.out.println("Exception type: " + e.getClass().getName());
+        System.out.println("Exception message: " + e.getMessage());
+        return ResponseEntity.status(502).body("Gateway error: " + e.getMessage());
+    }
+}
 }
