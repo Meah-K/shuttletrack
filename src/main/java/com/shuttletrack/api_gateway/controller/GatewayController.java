@@ -64,7 +64,9 @@ public class GatewayController {
         HttpMethod method = HttpMethod.valueOf(request.getMethod());
 
         try {
-            return restTemplate.exchange(targetUrl, method, entity, String.class);
+            ResponseEntity<String> result = restTemplate.exchange(targetUrl, method, entity, String.class);
+            System.out.println("forward() SUCCESS, status=" + result.getStatusCode());
+            return result;
         } catch (HttpStatusCodeException e) {
             // Downstream service responded with a real status (400, 404, 409, etc.) —
             // pass that exact status and body straight through instead of masking it as 502.
