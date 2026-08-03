@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -31,52 +32,108 @@ public class GatewayController {
     }
 
     @RequestMapping("/auth/**")
-    public ResponseEntity<String> routeToAuth(HttpServletRequest request, @RequestBody(required = false) String body) {
+    public ResponseEntity<String> routeToAuth(
+            HttpServletRequest request,
+            @RequestBody(required = false) String body) {
+
         return forward(request, body, authServiceUrl);
     }
 
     @RequestMapping("/tracking/**")
-    public ResponseEntity<String> routeToTracking(HttpServletRequest request, @RequestBody(required = false) String body) {
+    public ResponseEntity<String> routeToTracking(
+            HttpServletRequest request,
+            @RequestBody(required = false) String body) {
+
         return forward(request, body, trackingServiceUrl);
     }
 
     @RequestMapping("/notifications/**")
-    public ResponseEntity<String> routeToNotifications(HttpServletRequest request, @RequestBody(required = false) String body) {
+    public ResponseEntity<String> routeToNotifications(
+            HttpServletRequest request,
+            @RequestBody(required = false) String body) {
+
         return forward(request, body, notificationServiceUrl);
     }
 
-    private ResponseEntity<String> forward(HttpServletRequest request, String body, String targetBaseUrl) {
-        System.out.println("forward() called, targetBaseUrl=" + targetBaseUrl + " uri=" + request.getRequestURI());
+    private ResponseEntity<String> forward(
+            HttpServletRequest request,
+            String body,
+            String targetBaseUrl) {
+
         String targetUrl = targetBaseUrl + request.getRequestURI();
+
         if (request.getQueryString() != null) {
             targetUrl += "?" + request.getQueryString();
         }
 
+        System.out.println("======================================");
+        System.out.println("Forwarding Request");
+        System.out.println("Method : " + request.getMethod());
+        System.out.println("Target : " + targetUrl);
+        System.out.println("Body   : " + body);
+        System.out.println("======================================");
+
         HttpHeaders headers = new HttpHeaders();
-        headers.set("Content-Type", "application/json");
+        headers.setContentType(MediaType.APPLICATION_JSON);
 
         Object userId = request.getAttribute("userId");
         Object role = request.getAttribute("role");
-        if (userId != null) headers.set("X-User-Id", userId.toString());
-        if (role != null) headers.set("X-User-Role", role.toString());
+
+        if (userId != null) {
+            headers.set("X-User-Id", userId.toString());
+        }
+
+        if (role != null) {
+            headers.set("X-User-Role", role.toString());
+        }
 
         HttpEntity<String> entity = new HttpEntity<>(body, headers);
         HttpMethod method = HttpMethod.valueOf(request.getMethod());
 
         try {
-            ResponseEntity<String> result = restTemplate.exchange(targetUrl, method, entity, String.class);
-            System.out.println("forward() SUCCESS, status=" + result.getStatusCode());
-            return result;
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                    targetUrl,
+                    method,
+                    entity,
+                    String.class
+            );
+
+            System.out.println("========== DOWNSTREAM RESPONSE ==========");
+            System.out.println("Status : " + response.getStatusCode());
+            System.out.println("Headers: " + response.getHeaders());
+            System.out.println("Body   : " + response.getBody());
+            System.out.println("=========================================");
+
+            // Create a fresh response instead of returning the original one.
+            return ResponseEntity
+                    .status(response.getStatusCode())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(response.getBody());
+
         } catch (HttpStatusCodeException e) {
-            // Downstream service responded with a real status (400, 404, 409, etc.) —
-            // pass that exact status and body straight through instead of masking it as 502.
-            return ResponseEntity.status(e.getStatusCode()).body(e.getResponseBodyAsString());
+
+            System.out.println("========== DOWNSTREAM ERROR ==========");
+            System.out.println("Status : " + e.getStatusCode());
+            System.out.println("Body   : " + e.getResponseBodyAsString());
+            System.out.println("======================================");
+
+            return ResponseEntity
+                    .status(e.getStatusCode())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(e.getResponseBodyAsString());
+
         } catch (Exception e) {
-            // A genuine gateway-level failure — connection refused, timeout, DNS, etc.
-            System.out.println("Forwarding to: " + targetUrl);
-            System.out.println("Exception type: " + e.getClass().getName());
-            System.out.println("Exception message: " + e.getMessage());
-            return ResponseEntity.status(502).body("Gateway error: " + e.getMessage());
+
+            System.out.println("========== GATEWAY EXCEPTION ==========");
+            e.printStackTrace();
+            System.out.println("Exception Type : " + e.getClass().getName());
+            System.out.println("Message        : " + e.getMessage());
+            System.out.println("=======================================");
+
+            return ResponseEntity
+                    .status(502)
+                    .body("Gateway error: " + e.getMessage());
         }
     }
 }
