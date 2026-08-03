@@ -11,8 +11,8 @@ public class AppConfig {
     @Bean
     public RestTemplate restTemplate() {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(20000); // 20s — enough for a cold Railway instance to wake up
-        factory.setReadTimeout(20000);
+        factory.setConnectTimeout(60000); // 60s — covers Render free-tier cold starts (50s+)
+        factory.setReadTimeout(60000);
         return new RestTemplate(factory);
     }
 }
