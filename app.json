@@ -32,5 +32,13 @@
     "web": {
       "favicon": "./assets/favicon.png"
     }
+  },
+  "ios": {
+  "infoPlist": {
+    "NSLocationWhenInUseUsageDescription": "ShuttleTrack needs your location to calculate walking distance to the nearest stop."
   }
+},
+"android": {
+  "permissions": ["ACCESS_FINE_LOCATION"]
+}
 }

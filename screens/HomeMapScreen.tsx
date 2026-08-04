@@ -15,6 +15,7 @@ import type { Shuttle, ShuttleStatus } from '../mockData';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { moveShuttles } from '../utils/shuttleSimulator';
 import { getShuttlesWithEta } from '../utils/api';
+import ShuttleMapView from '../components/ShuttleMapView';
 
 
 type RootStackParamList = {
@@ -35,12 +36,6 @@ interface Ad {
   color: string;
 }
 
-let MapView: any, Marker: any;
-if (Platform.OS !== 'web') {
-  const Maps = require('react-native-maps');
-  MapView = Maps.default;
-  Marker = Maps.Marker;
-}
 
 const ADS: Ad[] = [
   { id: 1, title: 'Chicken Republic — Paa Joe', subtitle: '10% off with code SHUTTLE10 🍗', color: '#E63946' },
@@ -73,36 +68,14 @@ interface MemoizedMapProps {
 }
 
 const MemoizedMap = React.memo(function MemoizedMap({ shuttleData, onMarkerPress }: MemoizedMapProps) {
-  if (Platform.OS === 'web' || !MapView) {
-    return (
-      <View style={styles.mapPlaceholder}>
-        <Text style={styles.mapEmoji}>🗺️</Text>
-        <Text style={styles.mapText}>Live Campus Map</Text>
-        <Text style={styles.mapSub}>Map renders on mobile device</Text>
-        <View style={styles.markersRow}>
-          {shuttleData.map((shuttle) => (
-            <View key={shuttle.shuttleId} style={[styles.marker, { backgroundColor: getMarkerColor(shuttle.status) }]}>
-              <Ionicons name="bus" size={16} color="white" />
-            </View>
-          ))}
-        </View>
-      </View>
-    );
-  }
-
   return (
-    <MapView style={styles.map} initialRegion={CAMPUS_CENTER} showsUserLocation={true} showsMyLocationButton={false}>
-      {shuttleData.map((shuttle) => (
-        <Marker
-          key={shuttle.shuttleId}
-          coordinate={{ latitude: shuttle.latitude, longitude: shuttle.longitude }}
-          pinColor={getMarkerColor(shuttle.status)}
-          title={shuttle.routeName}
-          description={getStatusLabel(shuttle.status)}
-          onPress={() => onMarkerPress(shuttle)}
-        />
-      ))}
-    </MapView>
+    <ShuttleMapView
+      shuttleData={shuttleData}
+      campusCenter={CAMPUS_CENTER}
+      getMarkerColor={getMarkerColor}
+      getStatusLabel={getStatusLabel}
+      onMarkerPress={onMarkerPress}
+    />
   );
 });
 

@@ -8,6 +8,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import type { RouteProp } from '@react-navigation/native';
 import { routes, calculateDistanceKm, WALKING_SPEED_KMH } from '../mockData';
@@ -33,26 +34,40 @@ interface Recommendation {
   stopName: string;
 }
 
+const FALLBACK_STOP: Stop = {
+  stopId: 'default',
+  name: 'Main Gate',
+  latitude: 6.6745,
+  longitude: -1.5716,
+  order: 1,
+};
+
 export default function WalkOrWaitScreen({ navigation, route }: WalkOrWaitScreenProps): React.JSX.Element {
   const { shuttle } = route.params;
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
 
   const shuttleRoute = routes.find(r => r.routeId === shuttle.routeId);
 
   useEffect(() => {
-    const stop: Stop = shuttleRoute?.stops[0] ?? {
-      stopId: 'default',
-      name: 'Main Gate',
-      latitude: 6.6745,
-      longitude: -1.5716,
-      order: 1,
-    };
-    calculate(stop);
+    calculate();
   }, [shuttle]);
 
-  function calculate(stop: Stop): void {
-    const studentLat = 6.6736;
-    const studentLng = -1.5727;
+  // Picks the nearest stop on this route to a given student position,
+  // instead of always assuming stops[0].
+  function findNearestStop(studentLat: number, studentLng: number): Stop {
+    const stops = shuttleRoute?.stops ?? [];
+    if (stops.length === 0) return FALLBACK_STOP;
+
+    return stops.reduce((nearest, current) => {
+      const nearestDist = calculateDistanceKm(studentLat, studentLng, nearest.latitude, nearest.longitude);
+      const currentDist = calculateDistanceKm(studentLat, studentLng, current.latitude, current.longitude);
+      return currentDist < nearestDist ? current : nearest;
+    }, stops[0]);
+  }
+
+  function buildRecommendation(studentLat: number, studentLng: number): void {
+    const stop = findNearestStop(studentLat, studentLng);
 
     const distanceKm = calculateDistanceKm(studentLat, studentLng, stop.latitude, stop.longitude);
     const walkingTime = Math.max(Math.round((distanceKm / WALKING_SPEED_KMH) * 60), 1);
@@ -66,6 +81,29 @@ export default function WalkOrWaitScreen({ navigation, route }: WalkOrWaitScreen
       distanceMeters: Math.max(Math.round(distanceKm * 1000), 100),
       stopName: stop.name,
     });
+  }
+
+  async function calculate(): Promise<void> {
+    setLocationError(null);
+
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+
+      if (status !== 'granted') {
+        setLocationError('Location permission denied — showing estimate from default location.');
+        buildRecommendation(FALLBACK_STOP.latitude, FALLBACK_STOP.longitude);
+        return;
+      }
+
+      const position = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+
+      buildRecommendation(position.coords.latitude, position.coords.longitude);
+    } catch (error) {
+      setLocationError('Could not get your location — showing estimate from default location.');
+      buildRecommendation(FALLBACK_STOP.latitude, FALLBACK_STOP.longitude);
+    }
   }
 
   const isWait = recommendation?.recommendation === 'WAIT';
@@ -98,6 +136,13 @@ export default function WalkOrWaitScreen({ navigation, route }: WalkOrWaitScreen
             </Text>
           </View>
         </View>
+
+        {locationError ? (
+          <View style={styles.warningBox}>
+            <Ionicons name="warning-outline" size={16} color="#B45309" />
+            <Text style={styles.warningText}>{locationError}</Text>
+          </View>
+        ) : null}
 
         {recommendation ? (
           <View>
@@ -151,19 +196,7 @@ export default function WalkOrWaitScreen({ navigation, route }: WalkOrWaitScreen
               </Text>
             </View>
 
-            <TouchableOpacity
-              style={styles.recalcButton}
-              onPress={() => {
-                const stop: Stop = shuttleRoute?.stops[0] ?? {
-                  stopId: 'default',
-                  name: 'Main Gate',
-                  latitude: 6.6745,
-                  longitude: -1.5716,
-                  order: 1,
-                };
-                calculate(stop);
-              }}
-            >
+            <TouchableOpacity style={styles.recalcButton} onPress={() => calculate()}>
               <Ionicons name="refresh" size={16} color="#1C6B2A" />
               <Text style={styles.recalcText}>Recalculate</Text>
             </TouchableOpacity>
@@ -192,6 +225,8 @@ const styles = StyleSheet.create({
   shuttleSub: { fontSize: 12, color: '#6B7280' },
   shuttleBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 50 },
   shuttleBadgeText: { fontSize: 13, fontWeight: '700' },
+  warningBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FEF3C7', borderRadius: 12, borderWidth: 0.5, borderColor: '#FCD34D', padding: 12, marginBottom: 16 },
+  warningText: { fontSize: 12, color: '#92400E', flex: 1 },
   resultHero: { borderRadius: 20, padding: 24, marginBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   resultContent: { gap: 6, flex: 1 },
   resultLabel: { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.7)', letterSpacing: 1 },

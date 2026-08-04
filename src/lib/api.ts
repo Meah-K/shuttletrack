@@ -63,14 +63,14 @@ export const trackingApi = {
   /** Driver toggles HAS_SPACE / FULL. */
  updateStatus: (id: string, status: 'HAS_SPACE' | 'FULL' | 'INACTIVE') => {
   console.log("UPDATING STATUS:", id, status);
-  return api.put(`/tracking/shuttles/${id}/status`, { status });
+  return api.put(`/api/tracking/shuttles/${id}/status`, { status });
 },
 
   /** Driver app sends GPS every 10 seconds. */
 updateLocation: (id: string, lat: number, lng: number) => {
   console.log("SENDING LOCATION:", id, lat, lng);
 
-  return api.post(`/tracking/shuttles/${id}/location`, {
+  return api.post(`/api/tracking/shuttles/${id}/location`, {
     lat,
     lng
   });
