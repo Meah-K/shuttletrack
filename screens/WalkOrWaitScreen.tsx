@@ -11,8 +11,9 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import type { RouteProp } from '@react-navigation/native';
-import { routes, calculateDistanceKm, WALKING_SPEED_KMH } from '../mockData';
-import type { Shuttle, Stop, WalkOrWaitResult } from '../mockData';
+import { calculateDistanceKm, WALKING_SPEED_KMH } from '../mockData';
+import type { Shuttle, Stop, Route, WalkOrWaitResult } from '../mockData';
+import { getEta, getRoutes } from '../utils/api';
 
 type RootStackParamList = {
   WalkOrWait: { shuttle: Shuttle };
@@ -31,7 +32,8 @@ interface Recommendation {
   walkingTime: number;
   shuttleEta: number | null;
   distanceMeters: number;
-  stopName: string;
+  nearestStopName: string;
+  wouldMissShuttle: boolean;
 }
 
 const FALLBACK_STOP: Stop = {
@@ -44,17 +46,42 @@ const FALLBACK_STOP: Stop = {
 
 export default function WalkOrWaitScreen({ navigation, route }: WalkOrWaitScreenProps): React.JSX.Element {
   const { shuttle } = route.params;
+  const [destination, setDestination] = useState<Stop | null>(null);
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const shuttleRoute = routes.find(r => r.routeId === shuttle.routeId);
+  const [shuttleRoute, setShuttleRoute] = useState<Route | null>(null);
+  const [routesLoading, setRoutesLoading] = useState(true);
+  const [routesError, setRoutesError] = useState<string | null>(null);
 
   useEffect(() => {
-    calculate();
-  }, [shuttle]);
+    (async () => {
+      setRoutesLoading(true);
+      setRoutesError(null);
+      try {
+        const allRoutes = await getRoutes();
+        const matched = allRoutes.find(r => r.routeId === shuttle.routeId) ?? null;
+        setShuttleRoute(matched);
+        if (!matched) setRoutesError('Could not find stops for this route.');
+      } catch {
+        setRoutesError('Could not load stops — check your connection.');
+      } finally {
+        setRoutesLoading(false);
+      }
+    })();
+  }, [shuttle.routeId]);
 
-  // Picks the nearest stop on this route to a given student position,
-  // instead of always assuming stops[0].
+  const destinationOptions: Stop[] = (shuttleRoute?.stops ?? []).filter(
+    (stop, index, all) => all.findIndex(s => s.name === stop.name) === index
+  );
+
+  useEffect(() => {
+    if (destination) {
+      calculate();
+    }
+  }, [destination]);
+
   function findNearestStop(studentLat: number, studentLng: number): Stop {
     const stops = shuttleRoute?.stops ?? [];
     if (stops.length === 0) return FALLBACK_STOP;
@@ -66,32 +93,68 @@ export default function WalkOrWaitScreen({ navigation, route }: WalkOrWaitScreen
     }, stops[0]);
   }
 
-  function buildRecommendation(studentLat: number, studentLng: number): void {
-    const stop = findNearestStop(studentLat, studentLng);
+ async function buildRecommendation(studentLat: number, studentLng: number): Promise<void> {
+  if (!destination) return;
 
-    const distanceKm = calculateDistanceKm(studentLat, studentLng, stop.latitude, stop.longitude);
-    const walkingTime = Math.max(Math.round((distanceKm / WALKING_SPEED_KMH) * 60), 1);
-    const shuttleEta = shuttle.etaMinutes;
-    const isUnavailable = !shuttleEta || shuttle.status === 'FULL' || shuttle.status === 'INACTIVE';
+  const nearestStop = findNearestStop(studentLat, studentLng);
 
-    setRecommendation({
-      recommendation: isUnavailable ? 'WALK' : shuttleEta < walkingTime ? 'WAIT' : 'WALK',
-      walkingTime,
-      shuttleEta: shuttleEta ?? null,
-      distanceMeters: Math.max(Math.round(distanceKm * 1000), 100),
-      stopName: stop.name,
-    });
+  const distanceKm = calculateDistanceKm(studentLat, studentLng, destination.latitude, destination.longitude);
+  const walkingTime = Math.max(Math.round((distanceKm / WALKING_SPEED_KMH) * 60), 1);
+
+  // Walking time to the nearest stop — needed to check whether the student
+  // can actually reach it before the shuttle does.
+  const nearestStopDistanceKm = calculateDistanceKm(
+    studentLat, studentLng, nearestStop.latitude, nearestStop.longitude
+  );
+  const walkingTimeToNearestStop = Math.max(Math.round((nearestStopDistanceKm / WALKING_SPEED_KMH) * 60), 1);
+
+  let shuttleUnavailable = shuttle.status === 'FULL' || shuttle.status === 'INACTIVE';
+  let shuttleEta: number | null = null;
+  let etaToNearestStop: number | null = null;
+  let wouldMissShuttle = false;
+
+  if (!shuttleUnavailable) {
+    try {
+      const [destEtaResult, nearestEtaResult] = await Promise.all([
+        getEta(destination.stopId, shuttle.routeId),
+        getEta(nearestStop.stopId, shuttle.routeId),
+      ]);
+      shuttleEta = destEtaResult?.etaMinutes ?? null;
+      etaToNearestStop = nearestEtaResult?.etaMinutes ?? null;
+
+      if (shuttleEta === null || etaToNearestStop === null) {
+        shuttleUnavailable = true;
+      } else if (walkingTimeToNearestStop > etaToNearestStop) {
+        wouldMissShuttle = true;
+      }
+    } catch {
+      shuttleUnavailable = true;
+    }
   }
+
+  const canWait = !shuttleUnavailable && !wouldMissShuttle && shuttleEta !== null;
+
+  setRecommendation({
+    recommendation: canWait && shuttleEta! < walkingTime ? 'WAIT' : 'WALK',
+    walkingTime,
+    shuttleEta,
+    distanceMeters: Math.max(Math.round(distanceKm * 1000), 100),
+    nearestStopName: nearestStop.name,
+    wouldMissShuttle,
+  });
+}
 
   async function calculate(): Promise<void> {
     setLocationError(null);
+    setLoading(true);
 
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
 
       if (status !== 'granted') {
         setLocationError('Location permission denied — showing estimate from default location.');
-        buildRecommendation(FALLBACK_STOP.latitude, FALLBACK_STOP.longitude);
+        await buildRecommendation(FALLBACK_STOP.latitude, FALLBACK_STOP.longitude);
+        setLoading(false);
         return;
       }
 
@@ -99,19 +162,67 @@ export default function WalkOrWaitScreen({ navigation, route }: WalkOrWaitScreen
         accuracy: Location.Accuracy.Balanced,
       });
 
-      buildRecommendation(position.coords.latitude, position.coords.longitude);
+      await buildRecommendation(position.coords.latitude, position.coords.longitude);
     } catch (error) {
       setLocationError('Could not get your location — showing estimate from default location.');
-      buildRecommendation(FALLBACK_STOP.latitude, FALLBACK_STOP.longitude);
+      await buildRecommendation(FALLBACK_STOP.latitude, FALLBACK_STOP.longitude);
+    } finally {
+      setLoading(false);
     }
   }
 
   const isWait = recommendation?.recommendation === 'WAIT';
 
+  if (!destination) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={20} color="#1A1A1A" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Where are you going?</Text>
+          <View style={{ width: 36 }} />
+        </View>
+
+        <ScrollView showsVerticalScrollIndicator={false} style={styles.inner}>
+          <Text style={styles.pickerSubtitle}>
+            Pick your destination on {shuttle.routeName} to compare walking vs waiting.
+          </Text>
+
+          {routesLoading ? (
+            <View style={styles.loadingBox}>
+              <Ionicons name="reload" size={32} color="#1C6B2A" />
+              <Text style={styles.loadingText}>Loading stops...</Text>
+            </View>
+          ) : routesError || destinationOptions.length === 0 ? (
+            <View style={styles.warningBox}>
+              <Ionicons name="warning-outline" size={16} color="#B45309" />
+              <Text style={styles.warningText}>{routesError ?? 'No stops found for this route.'}</Text>
+            </View>
+          ) : (
+            destinationOptions.map(stop => (
+              <TouchableOpacity
+                key={stop.stopId}
+                style={styles.destOption}
+                onPress={() => setDestination(stop)}
+              >
+                <View style={styles.destOptionIcon}>
+                  <Ionicons name="location-outline" size={18} color="#1C6B2A" />
+                </View>
+                <Text style={styles.destOptionText}>{stop.name}</Text>
+                <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+              </TouchableOpacity>
+            ))
+          )}
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+        <TouchableOpacity style={styles.backButton} onPress={() => setDestination(null)}>
           <Ionicons name="arrow-back" size={20} color="#1A1A1A" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Walk or Wait?</Text>
@@ -137,6 +248,14 @@ export default function WalkOrWaitScreen({ navigation, route }: WalkOrWaitScreen
           </View>
         </View>
 
+        <TouchableOpacity style={styles.destinationBanner} onPress={() => setDestination(null)}>
+          <Ionicons name="flag-outline" size={16} color="#1C6B2A" />
+          <Text style={styles.destinationBannerText}>
+            Going to <Text style={styles.stopInfoBold}>{destination.name}</Text>
+          </Text>
+          <Text style={styles.changeText}>Change</Text>
+        </TouchableOpacity>
+
         {locationError ? (
           <View style={styles.warningBox}>
             <Ionicons name="warning-outline" size={16} color="#B45309" />
@@ -144,7 +263,7 @@ export default function WalkOrWaitScreen({ navigation, route }: WalkOrWaitScreen
           </View>
         ) : null}
 
-        {recommendation ? (
+        {recommendation && !loading ? (
           <View>
             <View style={[styles.resultHero, { backgroundColor: isWait ? '#1C6B2A' : '#E63946' }]}>
               <View style={styles.resultContent}>
@@ -152,8 +271,8 @@ export default function WalkOrWaitScreen({ navigation, route }: WalkOrWaitScreen
                 <Text style={styles.resultValue}>{isWait ? 'Wait' : 'Walk'}</Text>
                 <Text style={styles.resultSub}>
                   {isWait
-                    ? `Shuttle arrives in ${recommendation.shuttleEta} min`
-                    : `${recommendation.walkingTime} min on foot`}
+                    ? `Shuttle reaches ${destination.name} in ${recommendation.shuttleEta} min`
+                    : `${recommendation.walkingTime} min on foot to ${destination.name}`}
                 </Text>
               </View>
               <Ionicons name={isWait ? 'time-outline' : 'walk-outline'} size={64} color="rgba(255,255,255,0.2)" />
@@ -168,7 +287,7 @@ export default function WalkOrWaitScreen({ navigation, route }: WalkOrWaitScreen
                 <Text style={[styles.compTime, { color: !isWait ? '#E63946' : '#1A1A1A' }]}>
                   {recommendation.walkingTime} min
                 </Text>
-                <Text style={styles.compSub}>~{recommendation.distanceMeters}m</Text>
+                <Text style={styles.compSub}>~{recommendation.distanceMeters}m to {destination.name}</Text>
               </View>
 
               <View style={styles.vsDivider}>
@@ -181,7 +300,7 @@ export default function WalkOrWaitScreen({ navigation, route }: WalkOrWaitScreen
                 </View>
                 <Text style={styles.compTitle}>Shuttle</Text>
                 <Text style={[styles.compTime, { color: isWait ? '#1C6B2A' : '#1A1A1A' }]}>
-                  {recommendation.shuttleEta ? `${recommendation.shuttleEta} min` : 'N/A'}
+                  {recommendation.shuttleEta !== null ? `${recommendation.shuttleEta} min` : 'N/A'}
                 </Text>
                 <Text style={styles.compSub}>
                   {shuttle.status === 'HAS_SPACE' ? 'Has space' : 'No space'}
@@ -192,7 +311,7 @@ export default function WalkOrWaitScreen({ navigation, route }: WalkOrWaitScreen
             <View style={styles.stopInfo}>
               <Ionicons name="location" size={16} color="#1C6B2A" />
               <Text style={styles.stopInfoText}>
-                Nearest stop: <Text style={styles.stopInfoBold}>{recommendation.stopName}</Text>
+                Nearest stop to you: <Text style={styles.stopInfoBold}>{recommendation.nearestStopName}</Text>
               </Text>
             </View>
 
@@ -218,6 +337,13 @@ const styles = StyleSheet.create({
   backButton: { width: 36, height: 36, backgroundColor: '#F7F8F5', borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: 17, fontWeight: '700', color: '#1A1A1A' },
   inner: { padding: 16 },
+  pickerSubtitle: { fontSize: 13, color: '#6B7280', marginBottom: 16, lineHeight: 19 },
+  destOption: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 0.5, borderColor: '#E0E0DC', padding: 14, marginBottom: 10 },
+  destOptionIcon: { width: 36, height: 36, backgroundColor: '#EAF5EC', borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  destOptionText: { flex: 1, fontSize: 14, fontWeight: '600', color: '#1A1A1A' },
+  destinationBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#EAF5EC', borderRadius: 12, padding: 12, marginBottom: 16 },
+  destinationBannerText: { flex: 1, fontSize: 13, color: '#1A1A1A' },
+  changeText: { fontSize: 12, fontWeight: '700', color: '#1C6B2A' },
   shuttleCard: { backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 0.5, borderColor: '#E0E0DC', padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
   shuttleIconBox: { width: 44, height: 44, backgroundColor: '#EAF5EC', borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   shuttleInfo: { flex: 1, gap: 3 },

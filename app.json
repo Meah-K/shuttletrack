@@ -12,6 +12,11 @@
       "backgroundColor": "#ffffff"
     },
     "android": {
+      "package": "com.shuttletrack.app",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -20,25 +25,24 @@
         "googleMaps": {
           "apiKey": "AIzaSyBo3Z30s46g6Y9VRUT7Wnfb77vYPBku6fg"
         }
-      },
-      "package": "com.anonymous.shuttletrack"
+      }
     },
     "ios": {
       "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "ShuttleTrack needs your location to calculate walking distance to the nearest stop."
+      },
       "config": {
         "googleMapsApiKey": "AIzaSyBo3Z30s46g6Y9VRUT7Wnfb77vYPBku6fg"
       }
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "f40f13c9-4334-437e-9f8f-25110ce2f4f2"
+      }
     }
-  },
-  "ios": {
-  "infoPlist": {
-    "NSLocationWhenInUseUsageDescription": "ShuttleTrack needs your location to calculate walking distance to the nearest stop."
   }
-},
-"android": {
-  "permissions": ["ACCESS_FINE_LOCATION"]
-}
 }
