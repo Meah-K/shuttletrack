@@ -33,6 +33,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
+        // Preflight requests never carry auth headers — let them straight through
+        // so the browser's CORS check can pass before the real request is sent.
+        if (request.getMethod().equalsIgnoreCase("OPTIONS")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String path = request.getRequestURI();
 
         // Let public auth endpoints straight through, untouched.
