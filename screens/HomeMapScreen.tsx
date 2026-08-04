@@ -115,10 +115,9 @@ export default function HomeMapScreen({ navigation }: HomeMapScreenProps): React
   const sheetHeight = useRef(new Animated.Value(1)).current;
 
   // Merged list used for rendering — real shuttle(s) first, then mock filler.
-const shuttleData = realShuttleData.filter(
-  shuttle => shuttle.routeId === 'route-A' 
+const shuttleData = [...realShuttleData].sort((a, b) =>
+  a.routeId.localeCompare(b.routeId)
 );
-
   // Fetch the real shuttle(s) on mount, then poll periodically to keep ETA/status fresh.
   React.useEffect(() => {
     let isMounted = true;
@@ -175,7 +174,7 @@ async function loadRealShuttles() {
 
   const sheetHeightInterpolated = sheetHeight.interpolate({
     inputRange: [0, 1],
-    outputRange: [60, 280],
+    outputRange: [60, 290],
   });
 
   function getBadgeStyle(status: ShuttleStatus) {
@@ -302,8 +301,17 @@ const styles = StyleSheet.create({
   liveRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#1C6B2A' },
   liveText: { fontSize: 12, color: '#6B7280' },
-  shuttleCard: { backgroundColor: '#F7F8F5', borderRadius: 10, padding: 12, marginBottom: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
-  cardLeft: { flex: 1, gap: 3 },
+shuttleCard: {
+  backgroundColor: '#F7F8F5',
+  borderRadius: 10,
+  paddingVertical: 18,        
+  paddingHorizontal: 16,      // was implicit 12
+  marginBottom: 10,           // was 8
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  gap: 8,
+},  cardLeft: { flex: 1, gap: 3 },
   cardName: { fontSize: 13, fontWeight: '700', color: '#1A1A1A' },
   cardSub: { fontSize: 12, color: '#6B7280' },
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 50 },

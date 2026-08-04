@@ -30,18 +30,9 @@ export default function NotificationsScreen({ navigation }: NotificationsScreenP
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
 
-  async function fetchNotifications(data: AppNotification[]): Promise<void> {
+  const fetchNotifications = useCallback(async (): Promise<void> => {
     try {
       const data = await getNotifications();
-      const loadNotifications = async () => {
-  try {
-    const data = await getNotifications();
-    console.log("NOTIFICATIONS FROM API:", data);
-    fetchNotifications(data);
-  } catch (error) {
-    console.log("NOTIFICATION ERROR:", error);
-  }
-};
       const sorted = [...data].sort(
         (a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime()
       );
@@ -51,17 +42,20 @@ export default function NotificationsScreen({ navigation }: NotificationsScreenP
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
-    fetchNotifications();
-  }, []);
+    void fetchNotifications();
+  }, [fetchNotifications]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await fetchNotifications();
-    setRefreshing(false);
-  }, []);
+    try {
+      await fetchNotifications();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [fetchNotifications]);
 
   async function markAllRead(): Promise<void> {
     const unread = notifs.filter(n => !n.isRead);
@@ -69,20 +63,16 @@ export default function NotificationsScreen({ navigation }: NotificationsScreenP
     setNotifs(prev => prev.map(n => ({ ...n, isRead: true })));
   }
 
-  const renderItem = ({ item }: { item: AppNotification }) => (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={() => navigation.navigate('NotificationDetail', { notification: item })}
-      activeOpacity={0.7}
-    >
-      <View style={[styles.dot, item.isRead ? styles.dotRead : styles.dotUnread]} />
-      <View style={styles.cardContent}>
-        <Text style={[styles.title, item.isRead && styles.titleRead]}>{item.title}</Text>
-        <Text style={styles.message} numberOfLines={2}>{item.message}</Text>
-        <Text style={styles.timeAgo}>{item.timeAgo}</Text>
-      </View>
-    </TouchableOpacity>
-  );
+ const renderItem = ({ item }: { item: AppNotification }) => (
+  <View style={styles.card}>
+    <View style={[styles.dot, item.isRead ? styles.dotRead : styles.dotUnread]} />
+    <View style={styles.cardContent}>
+      <Text style={[styles.title, item.isRead && styles.titleRead]}>{item.title}</Text>
+      <Text style={styles.message} numberOfLines={2}>{item.message}</Text>
+      <Text style={styles.timeAgo}>{item.timeAgo}</Text>
+    </View>
+  </View>
+);
 
   const unreadCount = notifs.filter(n => !n.isRead).length;
 

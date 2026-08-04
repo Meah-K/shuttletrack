@@ -11,13 +11,13 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import type { StackNavigationProp } from '@react-navigation/stack';
-import { updateShuttleStatus, updateShuttleLocation } from '../utils/api';
+import { updateShuttleLocation, updateShuttleStatus, getUser } from '../utils/api';
 
 // TEMPORARY: hardcoded until there's a real driver->shuttle assignment endpoint.
-// Marvelle confirmed this is the only shuttle currently in the Tracking Service DB.
-// If she rebuilds her schema before final submission, this ID may need updating —
-// she said she'd ping if that happens.
-const SHUTTLE_ID = 'a1b2c3d4-e5f6-4789-a012-3456789abcde';
+// Add the other two driver emails here once you have them from Marvelle.
+const DRIVER_SHUTTLE_MAP: Record<string, string> = {
+  'salma@st.knust.edu.gh': 'a1b2c3d4-e5f6-4789-a012-3456789abcde', // Route A
+};
 
 type ShuttleStatus = 'HAS_SPACE' | 'FULL';
 
@@ -36,8 +36,22 @@ export default function DriverStatusScreen({ navigation }: DriverStatusScreenPro
   const [status, setStatus] = useState<ShuttleStatus>('HAS_SPACE');
   const [lastUpdated, setLastUpdated] = useState<string>('Just now');
   const [gpsError, setGpsError] = useState<string>('');
+  const [shuttleId, setShuttleId] = useState<string | null>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const lastUpdateTimeRef = useRef<number>(Date.now());
+
+  // ─── Load the driver's assigned shuttle ID ──────────────────
+  useEffect(() => {
+    async function loadShuttleId() {
+      const user = await getUser();
+      if (user?.email && DRIVER_SHUTTLE_MAP[user.email]) {
+        setShuttleId(DRIVER_SHUTTLE_MAP[user.email]);
+      } else {
+        setGpsError('No shuttle assigned to this driver account');
+      }
+    }
+    loadShuttleId();
+  }, []);
 
   useEffect(() => {
     Animated.loop(
@@ -48,7 +62,10 @@ export default function DriverStatusScreen({ navigation }: DriverStatusScreenPro
     ).start();
   }, []);
 
+  // ─── GPS tracking — waits until shuttleId is loaded ─────────
   useEffect(() => {
+    if (!shuttleId) return;
+
     let locationInterval: ReturnType<typeof setInterval>;
     let displayInterval: ReturnType<typeof setInterval>;
 
@@ -64,7 +81,7 @@ export default function DriverStatusScreen({ navigation }: DriverStatusScreenPro
         try {
           const position = await Location.getCurrentPositionAsync({});
           await updateShuttleLocation(
-            SHUTTLE_ID,
+            shuttleId as string,
             position.coords.latitude,
             position.coords.longitude
           );
@@ -84,27 +101,28 @@ export default function DriverStatusScreen({ navigation }: DriverStatusScreenPro
 
     displayInterval = setInterval(() => {
       const secondsAgo = Math.floor((Date.now() - lastUpdateTimeRef.current) / 1000);
-      if (secondsAgo < 5) {
-        setLastUpdated('Just now');
-      } else {
-        setLastUpdated(`${secondsAgo}s ago`);
-      }
+      setLastUpdated(secondsAgo < 5 ? 'Just now' : `${secondsAgo}s ago`);
     }, 1000);
 
     return () => {
       clearInterval(locationInterval);
       clearInterval(displayInterval);
     };
-  }, []);
+  }, [shuttleId]);
 
   async function toggleStatus(): Promise<void> {
+    if (!shuttleId) {
+      Alert.alert('No shuttle assigned', 'This driver account has no shuttle assigned yet.');
+      return;
+    }
+
     const newStatus: ShuttleStatus = status === 'HAS_SPACE' ? 'FULL' : 'HAS_SPACE';
     const previousStatus = status;
 
     setStatus(newStatus);
 
     try {
-      await updateShuttleStatus(SHUTTLE_ID, newStatus);
+      await updateShuttleStatus(shuttleId, newStatus);
     } catch (err) {
       setStatus(previousStatus);
       Alert.alert('Update failed', 'Could not update shuttle status. Please try again.');

@@ -20,7 +20,8 @@
         "googleMaps": {
           "apiKey": "AIzaSyBo3Z30s46g6Y9VRUT7Wnfb77vYPBku6fg"
         }
-      }
+      },
+      "package": "com.anonymous.shuttletrack"
     },
     "ios": {
       "supportsTablet": true,

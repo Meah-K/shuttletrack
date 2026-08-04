@@ -11,7 +11,9 @@ import NotificationsScreen from '../screens/NotificationsScreen';
 import NotificationDetailScreen from '../screens/NotificationDetailScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import NearbyScreen from '../screens/NearbyScreen';
+import BusinessDetailScreen from '../screens/BusinessDetailScreen';
 import type { Shuttle, Route, AppNotification } from '../mockData';
+import type { Business } from '../utils/api';
 import AboutScreen from '../screens/AboutScreen';
 import TermsScreen from '../screens/TermsScreen';
 
@@ -40,6 +42,7 @@ type ProfileStackParamList = {
 
 type NearbyStackParamList = {
   NearbyMain: undefined;
+  BusinessDetail: { business: Business };
 };
 
 const Tab = createBottomTabNavigator();
@@ -92,6 +95,7 @@ function NearbyStack(): React.JSX.Element {
   return (
     <NearbyNav.Navigator screenOptions={{ headerShown: false }}>
       <NearbyNav.Screen name="NearbyMain" component={NearbyScreen} />
+      <NearbyNav.Screen name="BusinessDetail" component={BusinessDetailScreen} />
     </NearbyNav.Navigator>
   );
 }

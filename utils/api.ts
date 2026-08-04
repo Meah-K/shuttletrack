@@ -3,8 +3,7 @@
 // Group 7 | CodeQuest 2026 | KNUST
 // ============================================================
 // Central API service file.
-// Currently uses mockData for all calls.
-// To switch to real backend: change BASE_URL and set USE_MOCK to false.
+// All calls route through the API Gateway.
 // ============================================================
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -22,11 +21,7 @@ import type {
 } from '../mockData';
 
 // ─── CONFIG ──────────────────────────────────────────────────
-// ─── CONFIG ──────────────────────────────────────────────────
-const AUTH_URL = 'https://shuttletrack-production-6b61.up.railway.app';
-const TRACKING_URL = 'https://shuttletrack-production-de59.up.railway.app';
-const NOTIFICATION_URL = 'https://shuttletrack-production.up.railway.app';
-
+export const BASE_URL = 'https://api-gateway-wqfc.onrender.com';
 const USE_MOCK = false;
 
 const MOCK_DELAY = 800;
@@ -109,7 +104,7 @@ export async function loginStudent(data: LoginRequest): Promise<LoginResponse> {
     };
   }
 
-  const response = await fetch(`${AUTH_URL}/auth/login`, {
+  const response = await fetch(`${BASE_URL}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -118,7 +113,7 @@ export async function loginStudent(data: LoginRequest): Promise<LoginResponse> {
   if (!response.ok) throw new Error('Login failed');
   const result: LoginResponse = await response.json();
   await saveToken(result.token);
-  await saveUser({ userId: result.userId, name: result.name, role: result.role });
+  await saveUser({ userId: result.userId, name: result.name, role: result.role, email: data.email });
   return result;
 }
 
@@ -128,13 +123,13 @@ export async function registerStudent(data: RegisterRequest): Promise<void> {
     return;
   }
 
-  const response = await fetch(`${AUTH_URL}/auth/register`, {
+  const response = await fetch(`${BASE_URL}/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
 
- if (!response.ok) {
+  if (!response.ok) {
     const errorBody = await response.text();
     console.log('REGISTER FAILED - Status:', response.status, 'Body:', errorBody);
     throw new Error('Registration failed');
@@ -145,16 +140,22 @@ export async function loginDriver(data: LoginRequest): Promise<LoginResponse> {
   if (USE_MOCK) {
     await delay(MOCK_DELAY);
     const mockToken = 'mock-jwt-token-driver-001';
-    await saveToken(mockToken);
-    await saveUser({ userId: result.userId, name: result.name, role: result.role, email: data.email });    return {
-      token: mockToken,
+    const mockResult = {
       userId: 'driver-001',
       name: 'Kwame Mensah',
-      role: 'DRIVER',
+      role: 'DRIVER' as const,
+    };
+    await saveToken(mockToken);
+    await saveUser({ userId: mockResult.userId, name: mockResult.name, role: mockResult.role, email: data.email });
+    return {
+      token: mockToken,
+      userId: mockResult.userId,
+      name: mockResult.name,
+      role: mockResult.role,
     };
   }
 
-  const response = await fetch(`${AUTH_URL}/auth/driver/login`, {
+  const response = await fetch(`${BASE_URL}/auth/driver/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -163,7 +164,7 @@ export async function loginDriver(data: LoginRequest): Promise<LoginResponse> {
   if (!response.ok) throw new Error('Driver login failed');
   const result: LoginResponse = await response.json();
   await saveToken(result.token);
-  await saveUser({ userId: result.userId, name: result.name, role: result.role });
+  await saveUser({ userId: result.userId, name: result.name, role: result.role, email: data.email });
   return result;
 }
 
@@ -180,7 +181,7 @@ export async function getShuttles(): Promise<Shuttle[]> {
   }
 
   const token = await getToken();
-  const response = await fetch(`${TRACKING_URL}/tracking/shuttles`, {
+  const response = await fetch(`${BASE_URL}/tracking/shuttles`, {
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
@@ -190,8 +191,6 @@ export async function getShuttles(): Promise<Shuttle[]> {
   if (!response.ok) throw new Error('Failed to fetch shuttles');
   const raw = await response.json();
 
-  // Backend doesn't send routeName or etaMinutes yet — fill them in here
-  // until Marvelle's real ETA calculation and routeName field are in place.
   return raw.map((s: any) => ({
     ...s,
     routeName: ROUTE_NAMES[s.routeId] ?? s.routeId,
@@ -206,7 +205,7 @@ export async function getRoutes(): Promise<Route[]> {
   }
 
   const token = await getToken();
-  const response = await fetch(`${TRACKING_URL}/tracking/routes`, {
+  const response = await fetch(`${BASE_URL}/tracking/routes`, {
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
@@ -227,7 +226,7 @@ export async function updateShuttleStatus(
   }
 
   const token = await getToken();
-  const response = await fetch(`${TRACKING_URL}/tracking/shuttles/${shuttleId}/status`, {
+  const response = await fetch(`${BASE_URL}/tracking/shuttles/${shuttleId}/status`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -250,7 +249,7 @@ export async function updateShuttleLocation(
   }
 
   const token = await getToken();
-  const response = await fetch(`${TRACKING_URL}/tracking/shuttles/${shuttleId}/location`, {
+  const response = await fetch(`${BASE_URL}/tracking/shuttles/${shuttleId}/location`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -275,7 +274,7 @@ export async function getEta(stopId: string, routeId: string): Promise<EtaRespon
   }
 
   const token = await getToken();
-  const response = await fetch(`${TRACKING_URL}/tracking/eta?stopId=${stopId}&routeId=${routeId}`, {
+  const response = await fetch(`${BASE_URL}/tracking/eta?stopId=${stopId}&routeId=${routeId}`, {
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
@@ -294,8 +293,7 @@ export async function getNotifications(): Promise<AppNotification[]> {
   }
 
   const token = await getToken();
-  console.log("TOKEN BEING SENT:", token);
-  const response = await fetch(`${NOTIFICATION_URL}/notifications`, {
+  const response = await fetch(`${BASE_URL}/notifications`, {
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
@@ -317,7 +315,7 @@ export async function markNotificationRead(notificationId: string): Promise<void
   }
 
   const token = await getToken();
-  const response = await fetch(`${NOTIFICATION_URL}/notifications/${notificationId}/read`, {
+  const response = await fetch(`${BASE_URL}/notifications/${notificationId}/read`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -364,4 +362,31 @@ export async function getShuttlesWithEta(): Promise<Shuttle[]> {
   );
 
   return shuttlesWithEta;
+}
+
+// ─── BUSINESSES ────────────────────────────────────────────────
+export interface Business {
+  id: string;
+  name: string;
+  category: string;
+  distance: string;
+  nearStop: string;
+  deal: string | null;
+  rating: number;
+  icon: string;
+  color: string;
+}
+
+export async function getNearbyBusinesses(): Promise<Business[]> {
+  const token = await getToken();
+  const response = await fetch(`${BASE_URL}/businesses`, {
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch businesses: ${response.status}`);
+  }
+  return response.json();
 }

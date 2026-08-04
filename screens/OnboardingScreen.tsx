@@ -172,6 +172,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1C6B2A',
   },
   mainBtn: {
+    
     backgroundColor: '#1C6B2A',
     paddingVertical: 16,
     paddingHorizontal: 24,

@@ -18,7 +18,7 @@ import { getToken } from './tokenStorage';
 // Local dev: 'http://localhost:8080' (works on simulator)
 // Phone testing: replace 'localhost' with your laptop's WiFi IP, e.g. 'http://192.168.1.5:8080'
 // Production: 'https://shuttletrack.up.railway.app' (or whatever Railway gives us)
-const BASE_URL = 'https://airy-trust-production-8d38.up.railway.app';
+const BASE_URL = 'https://api-gateway-wqfc.onrender.com';
 // --------------------------------------------------------------
 
 export const api = axios.create({
@@ -61,13 +61,20 @@ export const trackingApi = {
   getShuttle: (id: string) => api.get(`/api/tracking/shuttles/${id}`),
 
   /** Driver toggles HAS_SPACE / FULL. */
-  updateStatus: (id: string, status: 'HAS_SPACE' | 'FULL' | 'INACTIVE') =>
-    api.put(`/api/tracking/shuttles/${id}/status`, { status }),
+ updateStatus: (id: string, status: 'HAS_SPACE' | 'FULL' | 'INACTIVE') => {
+  console.log("UPDATING STATUS:", id, status);
+  return api.put(`/tracking/shuttles/${id}/status`, { status });
+},
 
   /** Driver app sends GPS every 10 seconds. */
-  updateLocation: (id: string, lat: number, lng: number) =>
-    api.post(`/api/tracking/shuttles/${id}/location`, { lat, lng }),
+updateLocation: (id: string, lat: number, lng: number) => {
+  console.log("SENDING LOCATION:", id, lat, lng);
 
+  return api.post(`/tracking/shuttles/${id}/location`, {
+    lat,
+    lng
+  });
+},
   getRoutes: () => api.get('/api/tracking/routes'),
   getEta: (stopId: string) => api.get(`/api/tracking/eta?stopId=${stopId}`),
 };

@@ -9,18 +9,20 @@ import {
   TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { getNearbyBusinesses } from '../utils/api';
+import type { Business } from '../utils/api';
+import type { StackNavigationProp } from '@react-navigation/stack';
 
 // ─── TYPES ───────────────────────────────────────────────────
-interface Business {
-  id: string;
-  name: string;
-  category: string;
-  distance: string;
-  nearStop: string;
-  deal: string | null;
-  rating: number;
-  icon: string;
-  color: string;
+type RootStackParamList = {
+  Nearby: undefined;
+  BusinessDetail: { business: Business };
+};
+
+type NearbyScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Nearby'>;
+
+interface NearbyScreenProps {
+  navigation: NearbyScreenNavigationProp;
 }
 
 interface Category {
@@ -29,7 +31,6 @@ interface Category {
   icon: string;
 }
 
-// ─── MOCK DATA ────────────────────────────────────────────────
 const CATEGORIES: Category[] = [
   { id: 'all', label: 'All', icon: 'grid' },
   { id: 'food', label: 'Food', icon: 'restaurant' },
@@ -39,103 +40,40 @@ const CATEGORIES: Category[] = [
   { id: 'health', label: 'Health', icon: 'medical' },
 ];
 
-const BUSINESSES: Business[] = [
-  {
-    id: '1',
-    name: 'Chicken Republic',
-    category: 'food',
-    distance: '2 min walk',
-    nearStop: 'Paa Joe Junction',
-    deal: '10% off with code SHUTTLE10',
-    rating: 4.5,
-    icon: 'restaurant',
-    color: '#E63946',
-  },
-  {
-    id: '2',
-    name: 'Papaye Restaurant',
-    category: 'food',
-    distance: '3 min walk',
-    nearStop: 'Main Gate',
-    deal: 'Free drink with any meal today',
-    rating: 4.3,
-    icon: 'fast-food',
-    color: '#F4A261',
-  },
-  {
-    id: '3',
-    name: 'KNUST Print Shop',
-    category: 'services',
-    distance: '1 min walk',
-    nearStop: 'SRC Bus Stop',
-    deal: '50 pages for GHS 5 only',
-    rating: 4.0,
-    icon: 'print',
-    color: '#2E5F8A',
-  },
-  {
-    id: '4',
-    name: 'Campus Café',
-    category: 'drinks',
-    distance: '4 min walk',
-    nearStop: 'Unity Hall',
-    deal: null,
-    rating: 4.7,
-    icon: 'cafe',
-    color: '#6B4226',
-  },
-  {
-    id: '5',
-    name: 'Healthy Bites',
-    category: 'food',
-    distance: '5 min walk',
-    nearStop: 'Main Gate',
-    deal: 'Buy 2 get 1 free on smoothies',
-    rating: 4.6,
-    icon: 'leaf',
-    color: '#1C6B2A',
-  },
-  {
-    id: '6',
-    name: 'Campus Pharmacy',
-    category: 'health',
-    distance: '2 min walk',
-    nearStop: 'SRC Bus Stop',
-    deal: null,
-    rating: 4.4,
-    icon: 'medical',
-    color: '#E63946',
-  },
-  {
-    id: '7',
-    name: 'KNUST Bookshop',
-    category: 'shopping',
-    distance: '3 min walk',
-    nearStop: 'Unity Hall',
-    deal: '5% off stationery this week',
-    rating: 4.2,
-    icon: 'book',
-    color: '#9B59B6',
-  },
-  {
-    id: '8',
-    name: 'MTN Service Centre',
-    category: 'services',
-    distance: '6 min walk',
-    nearStop: 'Main Gate',
-    deal: null,
-    rating: 3.9,
-    icon: 'phone-portrait',
-    color: '#F4A261',
-  },
-];
-
 // ─── COMPONENT ───────────────────────────────────────────────
-export default function NearbyScreen(): React.JSX.Element {
+export default function NearbyScreen({ navigation }: NearbyScreenProps): React.JSX.Element {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [businesses, setBusinesses] = useState<Business[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const filtered = BUSINESSES.filter(b => {
+  React.useEffect(() => {
+    let isMounted = true;
+
+    async function loadBusinesses() {
+      try {
+        const data = await getNearbyBusinesses();
+
+console.log("BUSINESSES FROM API:", data);
+
+if (isMounted) {
+  setBusinesses(data);
+  setError(null);
+}
+      } catch (err) {
+        if (isMounted) setError('Could not load nearby places');
+        console.log(err);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    }
+
+    loadBusinesses();
+    return () => { isMounted = false; };
+  }, []);
+
+  const filtered = businesses.filter(b => {
     const matchesCategory = selectedCategory === 'all' || b.category === selectedCategory;
     const matchesSearch = b.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       b.nearStop.toLowerCase().includes(searchQuery.toLowerCase());
@@ -214,7 +152,16 @@ export default function NearbyScreen(): React.JSX.Element {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
       >
-        {filtered.length === 0 ? (
+        {isLoading ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>Loading nearby places…</Text>
+          </View>
+        ) : error ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="alert-circle" size={40} color="#D0D0CC" />
+            <Text style={styles.emptyText}>{error}</Text>
+          </View>
+        ) : filtered.length === 0 ? (
           <View style={styles.emptyState}>
             <Ionicons name="search" size={40} color="#D0D0CC" />
             <Text style={styles.emptyText}>No businesses found</Text>
@@ -222,7 +169,11 @@ export default function NearbyScreen(): React.JSX.Element {
           </View>
         ) : (
           filtered.map(business => (
-            <TouchableOpacity key={business.id} style={styles.businessCard}>
+            <TouchableOpacity
+              key={business.id}
+              style={styles.businessCard}
+              onPress={() => navigation.navigate('BusinessDetail', { business })}
+            >
 
               {/* Icon */}
               <View style={[styles.businessIcon, { backgroundColor: business.color + '20' }]}>
@@ -311,28 +262,28 @@ const styles = StyleSheet.create({
     color: '#1A1A1A',
   },
   categoryRow: {
-  marginTop: 10,
-  marginBottom: 4,
-  flexGrow: 0,
-  flexShrink: 0,
-},
+    marginTop: 10,
+    marginBottom: 4,
+    flexGrow: 0,
+    flexShrink: 0,
+  },
   categoryContent: {
     paddingHorizontal: 16,
     gap: 8,
     flexDirection: 'row',
   },
-categoryPill: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  gap: 5,
-  backgroundColor: '#FFFFFF',
-  borderWidth: 1,
-  borderColor: '#E0E0DC',
-  borderRadius: 50,
-  paddingHorizontal: 14,
-  paddingVertical: 8,
-  height: 36,
-},
+  categoryPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E0E0DC',
+    borderRadius: 50,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    height: 36,
+  },
   categoryPillActive: {
     backgroundColor: '#1C6B2A',
     borderColor: '#1C6B2A',
